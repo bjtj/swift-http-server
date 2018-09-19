@@ -1,4 +1,4 @@
 
 public protocol HttpRequestHandler {
-    func handle(req: HttpRequest?) throws -> HttpResponse?
+    func handle(request: HttpRequest?) throws -> HttpResponse?
 }

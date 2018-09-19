@@ -96,7 +96,20 @@ final class swift_http_serverTests: XCTestCase {
 
     func testKeepConnect() {
 
-        let _ = HttpHeader()
+        let header = HttpHeader()
+
+        header.firstLine = FirstLine.read(text: "HTTP/1.0 200 OK")
+
+        XCTAssertEqual(header.connectionType, nil)
+        XCTAssertEqual(false, requiredKeepConnect(specVersion: header.firstLine.first, header: header))
+
+        header["Connection"] = "close"
+        XCTAssertEqual(header.connectionType, .close)
+        XCTAssertEqual(false, requiredKeepConnect(specVersion: header.firstLine.first, header: header))
+
+        header["Connection"] = "keep-alive"
+        XCTAssertEqual(header.connectionType, .keep_alive)
+        XCTAssertEqual(true, requiredKeepConnect(specVersion: header.firstLine.first, header: header))
         
         // Connection: keep-alive
         // Connection: close

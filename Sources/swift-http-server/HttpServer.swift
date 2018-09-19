@@ -1,6 +1,10 @@
 import Foundation
 import Socket
 
+public enum HttpHeaderError : Error {
+    case insufficentHeaderString
+}
+
 public class HttpServer {
 
     var finishing = false
@@ -22,7 +26,34 @@ public class HttpServer {
         return (listenSocket?.signature!.hostname, listenSocket?.signature!.port)
     }
 
-    func comm(remoteSocket: Socket?) throws {
+    
+
+    func comm(remoteSocket: Socket?) {
+
+        do {
+            let headerString = try readHeaderString(remoteSocket: remoteSocket)
+            let header = HttpHeader.read(text: headerString)
+            let request = HttpRequest(remoteSocket: remoteSocket, header: header)
+            let response = handleRequest(request: request)
+            try remoteSocket!.write(from: response!.header.description.data(using: .utf8)!)
+
+            guard let inputStream = response!.inputStream else {
+                return
+            }
+
+            let bufferSize = 1024
+            let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+            while finishing == false && inputStream.hasBytesAvailable {
+                let read = inputStream.read(buffer, maxLength: bufferSize)
+                try remoteSocket!.write(from: buffer, bufSize: read)
+                // transfer.write(from: data, count: read)
+            }
+        } catch let error {
+            print("error: \(error)")
+        }
+    }
+
+    func readHeaderString(remoteSocket: Socket?) throws -> String {
         var data = Data(capacity: 1)
         var headerString = ""
         while self.finishing == false {
@@ -32,56 +63,38 @@ public class HttpServer {
 
             let bytesRead = try remoteSocket?.read(into: &data)
             if bytesRead! <= 0 {
-                return
+                throw HttpHeaderError.insufficentHeaderString
             }
             headerString += String(data: data, encoding: .utf8)!
             if headerString.hasSuffix("\r\n\r\n") {
                 break
             }
         }
-        
-        let header = HttpHeader.read(text: headerString)
-        let request = HttpRequest(remoteSocket: remoteSocket, header: header)
+        return headerString
+    }
 
-        var response: HttpResponse?
+    func handleRequest(request: HttpRequest) -> HttpResponse? {
         do {
             // var transfer = Transfer(remoteSocket: remoteSocket)
-            if let handler = router?.dispatch(path: header.firstLine.second) {
-                response = try handler.handle(req: request)
+            if let handler = router?.dispatch(path: request.path) {
+                return try handler.handle(request: request)
             } else {
-                response = HttpResponse(code: 400, reason: HttpError.shared[404])
+                return HttpResponse(code: 400, reason: HttpError.shared[404])
             }
         } catch let error {
             print("error: \(error)")
-            response = HttpResponse(code: 500, reason: HttpError.shared[500])
-        }
-        try remoteSocket!.write(from: response!.header.description.data(using: .utf8)!)
-
-        guard let inputStream = response!.inputStream else {
-            return
-        }
-
-        let bufferSize = 1024
-        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
-        while finishing == false && inputStream.hasBytesAvailable {
-            let read = inputStream.read(buffer, maxLength: bufferSize)
-            try remoteSocket!.write(from: buffer, bufSize: read)
-            // transfer.write(from: data, count: read)
+            return HttpResponse(code: 500, reason: HttpError.shared[500])
         }
     }
 
-    func onConnect(remoteSocket: Socket?) throws {
+    func onConnect(remoteSocket: Socket?) {
         let queue = DispatchQueue.global(qos: .default)
         queue.async { [unowned self, remoteSocket] in
             defer {
                 self.onDisconnect(remoteSocket: remoteSocket)
             }
-            do {
-                try self.comm(remoteSocket: remoteSocket)
-                remoteSocket?.close()
-            } catch let error {
-                print(error)
-            }
+            self.comm(remoteSocket: remoteSocket)
+            remoteSocket?.close()
         }
     }
 
@@ -94,7 +107,7 @@ public class HttpServer {
         // print((listenSocket?.signature)!)
         repeat {
             let remoteSocket = try listenSocket?.acceptClientConnection()
-            try onConnect(remoteSocket: remoteSocket)
+            onConnect(remoteSocket: remoteSocket)
         } while finishing == false
         listenSocket?.close()
         listenSocket = nil
