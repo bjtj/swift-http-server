@@ -71,6 +71,19 @@ final class swift_http_serverTests: XCTestCase {
         sleep(1)
     }
 
+    func testTransfer() {
+        // fixed size
+        // chunked
+    }
+
+    func testKeepConnect() {
+
+        let header = HttpHeader()
+        
+        // Connection: keep-alive
+        // Connection: close
+    }
+
     static var allTests = [
       ("testExample", testExample),
       ("testHttpHeader", testHttpHeader),

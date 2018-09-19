@@ -1,30 +1,31 @@
 import Foundation
 
 public class HttpResponse {
-    var header: HttpHeader?
+    private(set) var header: HttpHeader = HttpHeader()
     var inputStream: InputStream?
 
-    init(specVersion: String = "HTTP/1.1", code: Int, reason: String?) {
-        header!.firstLine.first = specVersion
+    init(specVersion: HttpSpecVersion = .HTTP1_1, code: Int, reason: String?) {
+        header.specVersion = specVersion
+        header.firstLine.first = specVersion.rawValue
         self.code = code
         self.reason = reason
     }
 
     var code: Int {
         get {
-            return Int(header!.firstLine.second)!
+            return Int(header.firstLine.second)!
         }
         set(value) {
-            header?.firstLine.second = "\(value)"
+            header.firstLine.second = "\(value)"
         }
     }
 
     var reason: String? {
         get {
-            return header!.firstLine.third
+            return header.firstLine.third
         }
         set(value) {
-            header!.firstLine.third = value!
+            header.firstLine.third = value!
         }
     }
 }

@@ -55,7 +55,7 @@ public class HttpServer {
             print("error: \(error)")
             response = HttpResponse(code: 500, reason: HttpError.shared[500])
         }
-        try remoteSocket!.write(from: response!.header!.description.data(using: .utf8)!)
+        try remoteSocket!.write(from: response!.header.description.data(using: .utf8)!)
 
         guard let inputStream = response!.inputStream else {
             return

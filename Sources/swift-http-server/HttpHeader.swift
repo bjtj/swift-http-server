@@ -40,6 +40,7 @@ public class FirstLine {
 
 public class HttpHeader {
 
+    public var specVersion: HttpSpecVersion?
     public var firstLine = FirstLine()
     var fields: [KeyValuePair] = []
 
@@ -50,6 +51,43 @@ public class HttpHeader {
             }
         }
         return false
+    }
+
+    public var contentLength: Int? {
+        guard let length = self["Content-Length"] else {
+            return nil
+        }
+        return Int(length)
+    }
+
+    public var contentType: String? {
+        guard let type = self["Content-Type"] else {
+            return nil
+        }
+        return type
+    }
+
+    public var connectionType: HttpConnectionType? {
+        guard let connection = self["Connection"] else {
+            return nil
+        }
+        if connection.caseInsensitiveCompare("close") == .orderedSame {
+            return .close
+        }
+        if connection.caseInsensitiveCompare("keep-alive") == .orderedSame {
+            return .keep_alive
+        }
+        return nil
+    }
+
+    public var transferEncoding: HttpTransferEncoding? {
+        guard let encoding = self["Transfer-Encoding"] else {
+            return nil
+        }
+        if encoding.caseInsensitiveCompare("chunked") == .orderedSame {
+            return .chunked
+        }
+        return nil
     }
 
     subscript (key: String) -> String? {
