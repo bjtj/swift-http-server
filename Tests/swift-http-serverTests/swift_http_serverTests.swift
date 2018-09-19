@@ -74,14 +74,27 @@ final class swift_http_serverTests: XCTestCase {
     func testTransfer() {
         // fixed size
         // chunked
+
+        let data = Data()
+        let inputStream = InputStream(data: "5\r\nhello6\r\n world0\r\n".data(using: .utf8)!)
+        let transfer = ChunkedTransfer(inputStream: inputStream)
+        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: 10)
+        let readSize = transfer.read(buffer, maxLength: 10)
+        if readSize > 0 {
+            print(String(data: data, encoding: .utf8)!)
+        }
     }
 
     func testKeepConnect() {
 
-        let header = HttpHeader()
+        let _ = HttpHeader()
         
         // Connection: keep-alive
         // Connection: close
+    }
+
+    func testRoute() {
+        var _ = Router()
     }
 
     static var allTests = [
@@ -89,5 +102,8 @@ final class swift_http_serverTests: XCTestCase {
       ("testHttpHeader", testHttpHeader),
       ("testHttpHeaderReader", testHttpHeaderReader),
       ("testHttpServer", testHttpServer),
+      ("testTransfer", testTransfer),
+      ("testKeepConnect", testKeepConnect),
+      ("testRoute", testRoute),
     ]
 }
