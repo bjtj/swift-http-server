@@ -1,6 +1,8 @@
-import Foundation
+import Socket
 
-protocol Transfer {
-    func read() -> Data?
-    func write(data: Data?)
+public class Transfer {
+    public var remoteSocket: Socket?
+    public init(remoteSocket: Socket?) {
+        self.remoteSocket = remoteSocket
+    }
 }
