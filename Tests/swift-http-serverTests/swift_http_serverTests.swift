@@ -71,18 +71,27 @@ final class swift_http_serverTests: XCTestCase {
         sleep(1)
     }
 
-    func testTransfer() {
+    func testChunkedTransfer() {
         // fixed size
         // chunked
 
-        let data = Data()
         let inputStream = InputStream(data: "5\r\nhello6\r\n world0\r\n".data(using: .utf8)!)
         let transfer = ChunkedTransfer(inputStream: inputStream)
-        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: 10)
-        let readSize = transfer.read(buffer, maxLength: 10)
-        if readSize > 0 {
-            print(String(data: data, encoding: .utf8)!)
-        }
+
+        inputStream.open()
+
+        XCTAssertEqual(try transfer.readChunkSize(), 5)
+        XCTAssertEqual(try transfer.readChunkData(chunkSize: 5), "hello".data(using: .utf8))
+        // XCTAssertEqual(try transfer.readChunkSize(), 6)
+        // XCTAssertEqual(try transfer.readChunkData(chunkSize: 6), " world".data(using: .utf8))
+        // XCTAssertEqual(try transfer.readChunkSize(), 0)
+
+        let bufferSize = 10
+        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+        XCTAssertEqual(transfer.read(buffer, maxLength: bufferSize), 6)
+        XCTAssertEqual(String(cString: buffer), " world")
+
+        XCTAssertEqual(transfer.read(buffer, maxLength: bufferSize), 0)
     }
 
     func testKeepConnect() {
@@ -102,7 +111,7 @@ final class swift_http_serverTests: XCTestCase {
       ("testHttpHeader", testHttpHeader),
       ("testHttpHeaderReader", testHttpHeaderReader),
       ("testHttpServer", testHttpServer),
-      ("testTransfer", testTransfer),
+      ("testChunkedTransfer", testChunkedTransfer),
       ("testKeepConnect", testKeepConnect),
       ("testRoute", testRoute),
     ]
