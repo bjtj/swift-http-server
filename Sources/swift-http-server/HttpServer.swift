@@ -25,6 +25,10 @@ public class HttpServer {
         return (listenSocket?.signature!.hostname, listenSocket?.signature!.port)
     }
 
+    public var listeningPort: Int32 {
+        return listenSocket!.listeningPort
+    }
+
     public func route(path: String, handler: HttpRequestClosure?) {
         if handler == nil {
             self.router.unregister(path: path)
@@ -72,7 +76,6 @@ public class HttpServer {
 
     func handleRequest(request: HttpRequest) -> HttpResponse? {
         do {
-            // var transfer = Transfer(remoteSocket: remoteSocket)
             if let handler = router.dispatch(path: request.path) {
                 return try handler(request)
             } else {
@@ -84,26 +87,27 @@ public class HttpServer {
         }
     }
 
-    func onConnect(remoteSocket: Socket?) {
+    func onConnect(remoteSocket: Socket) {
+        connectedSockets[remoteSocket.socketfd] = remoteSocket
         let queue = DispatchQueue.global(qos: .default)
         queue.async { [unowned self, remoteSocket] in
-            defer {
-                self.onDisconnect(remoteSocket: remoteSocket)
-            }
             self.comm(remoteSocket: remoteSocket)
-            remoteSocket?.close()
+            remoteSocket.close()
+            self.onDisconnect(remoteSocket: remoteSocket)
         }
     }
 
-    func onDisconnect(remoteSocket: Socket?) {
+    func onDisconnect(remoteSocket: Socket) {
+        connectedSockets[remoteSocket.socketfd] = nil
     }
 
     func loop() throws {
         listenSocket = try Socket.create(family: .inet, type: .stream, proto: .tcp)
         try listenSocket?.listen(on: port, maxBacklogSize: backlog, allowPortReuse: reusePort)
-        // print((listenSocket?.signature)!)
         repeat {
-            let remoteSocket = try listenSocket?.acceptClientConnection()
+            guard let remoteSocket = try listenSocket?.acceptClientConnection() else {
+                return
+            }
             onConnect(remoteSocket: remoteSocket)
         } while finishing == false
         listenSocket?.close()
