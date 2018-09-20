@@ -37,6 +37,12 @@ final class swift_http_serverTests: XCTestCase {
 
     func testHttpServer() {
         let server = HttpServer(port: 0)
+        server.route(path: "/") {
+            (request) in
+            let response = HttpResponse(code: 200, reason: HttpError.shared[200])
+            response.data = "Hello".data(using: .utf8)
+            return response
+        }
         let queue = DispatchQueue.global(qos: .default)
         queue.async {
             do {

@@ -2,7 +2,7 @@ import Foundation
 
 public class HttpResponse {
     private(set) var header: HttpHeader = HttpHeader()
-    var inputStream: InputStream?
+    public var data: Data?
 
     init(specVersion: HttpSpecVersion = .HTTP1_1, code: Int, reason: String?) {
         header.specVersion = specVersion

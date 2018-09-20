@@ -13,20 +13,25 @@ public class HttpServer {
     var backlog: Int
     var reusePort: Bool
     var connectedSockets = [Int32: Socket]()
-    let router: Router?
+    let router = Router()
 
     public init(port: Int = 0, backlog: Int = 5, reusePort: Bool = true) {
         self.port = port
         self.backlog = backlog
         self.reusePort = reusePort
-        router = Router()
     }
 
     public var serverAddress: (String?, Int32?) {
         return (listenSocket?.signature!.hostname, listenSocket?.signature!.port)
     }
 
-    
+    public func route(path: String, handler: HttpRequestClosure?) {
+        if handler == nil {
+            self.router.unregister(path: path)
+        } else {
+            self.router.register(path: path, handler: handler);
+        }
+    }
 
     func comm(remoteSocket: Socket?) {
 
@@ -36,18 +41,10 @@ public class HttpServer {
             let request = HttpRequest(remoteSocket: remoteSocket, header: header)
             let response = handleRequest(request: request)
             try remoteSocket!.write(from: response!.header.description.data(using: .utf8)!)
-
-            guard let inputStream = response!.inputStream else {
+            guard let data = response!.data else {
                 return
             }
-
-            let bufferSize = 1024
-            let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
-            while finishing == false && inputStream.hasBytesAvailable {
-                let read = inputStream.read(buffer, maxLength: bufferSize)
-                try remoteSocket!.write(from: buffer, bufSize: read)
-                // transfer.write(from: data, count: read)
-            }
+            try remoteSocket!.write(from: data)
         } catch let error {
             print("error: \(error)")
         }
@@ -76,8 +73,8 @@ public class HttpServer {
     func handleRequest(request: HttpRequest) -> HttpResponse? {
         do {
             // var transfer = Transfer(remoteSocket: remoteSocket)
-            if let handler = router?.dispatch(path: request.path) {
-                return try handler.handle(request: request)
+            if let handler = router.dispatch(path: request.path) {
+                return try handler(request)
             } else {
                 return HttpResponse(code: 400, reason: HttpError.shared[404])
             }
