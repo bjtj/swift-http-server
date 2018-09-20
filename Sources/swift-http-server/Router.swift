@@ -2,9 +2,9 @@ public class ResourceProvider {
 }
 
 public class Router {
-    var table: [String: HttpRequestClosure] = [:]
+    var table: [String: HttpRequestHandler] = [:]
 
-    subscript(path: String) -> HttpRequestClosure? {
+    subscript(path: String) -> HttpRequestHandler? {
         get {
             return table[path]
         }
@@ -13,15 +13,19 @@ public class Router {
         }
     }
 
-    public func register(path: String, handler: HttpRequestClosure?) {
+    public func register(path: String, handler: HttpRequestHandler?) {
         table[path] = handler
+    }
+
+    public func register(path: String, handler: HttpRequestClosure?) {
+        table[path] = HttpRequestHandler(with: handler)
     }
 
     public func unregister(path: String) {
         table[path] = nil
     }
 
-    public func dispatch(path: String) -> HttpRequestClosure? {
+    public func dispatch(path: String) -> HttpRequestHandler? {
         return table[path]
     }
 }

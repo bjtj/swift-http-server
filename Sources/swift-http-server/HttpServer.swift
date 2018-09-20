@@ -29,6 +29,14 @@ public class HttpServer {
         return listenSocket!.listeningPort
     }
 
+    public func route(path: String, handler: HttpRequestHandler?) {
+        if handler == nil {
+            self.router.unregister(path: path)
+        } else {
+            self.router.register(path: path, handler: handler);
+        }
+    }
+
     public func route(path: String, handler: HttpRequestClosure?) {
         if handler == nil {
             self.router.unregister(path: path)
@@ -83,11 +91,10 @@ public class HttpServer {
 
     func handleRequest(request: HttpRequest) -> HttpResponse? {
         do {
-            if let handler = router.dispatch(path: request.path) {
-                return try handler(request)
-            } else {
+            guard let handler = router.dispatch(path: request.path) else {
                 return HttpResponse(code: 400, reason: HttpError.shared[404])
             }
+            return try handler.handle(request: request)
         } catch let error {
             print("error: \(error)")
             return HttpResponse(code: 500, reason: HttpError.shared[500])
