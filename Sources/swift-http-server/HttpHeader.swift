@@ -54,40 +54,84 @@ public class HttpHeader {
     }
 
     public var contentLength: Int? {
-        guard let length = self["Content-Length"] else {
-            return nil
+        get {
+            guard let length = self["Content-Length"] else {
+                return nil
+            }
+            return Int(length)
         }
-        return Int(length)
+        set(value) {
+            self["Content-Length"] = "\(value!)"
+        }
     }
 
     public var contentType: String? {
-        guard let type = self["Content-Type"] else {
-            return nil
+        get {
+            guard let type = self["Content-Type"] else {
+                return nil
+            }
+            return type
         }
-        return type
+        set(value) {
+            self["Content-Type"] = value
+        }
     }
 
     public var connectionType: HttpConnectionType? {
-        guard let connection = self["Connection"] else {
+        get {
+            guard let connection = self["Connection"] else {
+                return nil
+            }
+            if connection.caseInsensitiveCompare("close") == .orderedSame {
+                return .close
+            }
+            if connection.caseInsensitiveCompare("keep-alive") == .orderedSame {
+                return .keep_alive
+            }
             return nil
         }
-        if connection.caseInsensitiveCompare("close") == .orderedSame {
-            return .close
+        set(value) {
+            guard let type = value else {
+                self["Connection"] = nil
+                return
+            }
+            self["Connection"] = type.rawValue
         }
-        if connection.caseInsensitiveCompare("keep-alive") == .orderedSame {
-            return .keep_alive
-        }
-        return nil
     }
 
     public var transferEncoding: HttpTransferEncoding? {
-        guard let encoding = self["Transfer-Encoding"] else {
+        get {
+            guard let encoding = self["Transfer-Encoding"] else {
+                return nil
+            }
+            if encoding.caseInsensitiveCompare("chunked") == .orderedSame {
+                return .chunked
+            }
             return nil
         }
-        if encoding.caseInsensitiveCompare("chunked") == .orderedSame {
-            return .chunked
+        set (value) {
+            guard let encoding = value else {
+                self["Transfer-Encoding"] = nil
+                return
+            }
+            self["Transfer-Encoding"] = encoding.rawValue
         }
-        return nil
+    }
+
+    public var expect: String? {
+        get {
+            return self["Expect"]
+        }
+        set(value) {
+            self["Expect"] = value
+        }
+    }
+
+    public var isExpect100: Bool {
+        guard let expect = self["Expect"] else {
+            return false
+        }
+        return expect.hasPrefix("100-")
     }
 
     subscript (key: String) -> String? {

@@ -37,13 +37,20 @@ public class HttpServer {
         }
     }
 
-    func comm(remoteSocket: Socket?) {
+    func communicate(remoteSocket: Socket?) {
 
         do {
             let headerString = try readHeaderString(remoteSocket: remoteSocket)
             let header = HttpHeader.read(text: headerString)
             let request = HttpRequest(remoteSocket: remoteSocket, header: header)
             let response = handleRequest(request: request)
+            if response!.header.contentLength == nil {
+                if response!.data == nil {
+                    response!.header.contentLength = 0
+                } else {
+                    response!.header.contentLength = response!.data!.count
+                }
+            }
             try remoteSocket!.write(from: response!.header.description.data(using: .utf8)!)
             guard let data = response!.data else {
                 return
@@ -89,9 +96,9 @@ public class HttpServer {
 
     func onConnect(remoteSocket: Socket) {
         connectedSockets[remoteSocket.socketfd] = remoteSocket
-        let queue = DispatchQueue.global(qos: .default)
-        queue.async { [unowned self, remoteSocket] in
-            self.comm(remoteSocket: remoteSocket)
+        DispatchQueue.global(qos: .default).async {
+            [unowned self, remoteSocket] in
+            self.communicate(remoteSocket: remoteSocket)
             remoteSocket.close()
             self.onDisconnect(remoteSocket: remoteSocket)
         }
