@@ -1,5 +1,5 @@
 import XCTest
-@testable import swift_http_server
+@testable import SwiftHttpServer
 
 final class swift_http_serverTests: XCTestCase {
     func testExample() {

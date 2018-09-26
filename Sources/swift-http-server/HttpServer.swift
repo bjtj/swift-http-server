@@ -94,7 +94,7 @@ public class HttpServer {
             guard let handler = router.dispatch(path: request.path) else {
                 return HttpResponse(code: 400, reason: HttpError.shared[404])
             }
-            return try handler.handle(request: request)
+            return try handler.onHttpRequest(request: request)
         } catch let error {
             print("error: \(error)")
             return HttpResponse(code: 500, reason: HttpError.shared[500])

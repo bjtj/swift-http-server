@@ -4,26 +4,27 @@
 import PackageDescription
 
 let package = Package(
-    name: "swift-http-server",
-    products: [
-        // Products define the executables and libraries produced by a package, and make them visible to other packages.
-        .library(
-            name: "swift-http-server",
-            targets: ["swift-http-server"]),
-    ],
-    dependencies: [
-        // Dependencies declare other packages that this package depends on.
-        // .package(url: /* package url */, from: "1.0.0"),
-      .package(url: "https://github.com/IBM-Swift/BlueSocket.git", from: "1.0.16")
-    ],
-    targets: [
-        // Targets are the basic building blocks of a package. A target can define a module or a test suite.
-        // Targets can depend on other targets in this package, and on products in packages which this package depends on.
-        .target(
-            name: "swift-http-server",
-            dependencies: ["Socket"]),
-        .testTarget(
-            name: "swift-http-serverTests",
-            dependencies: ["swift-http-server"]),
-    ]
+  name: "SwiftHttpServer",
+  products: [
+    // Products define the executables and libraries produced by a package, and make them visible to other packages.
+    .library(
+      name: "SwiftHttpServer",
+      targets: ["SwiftHttpServer"]),
+  ],
+  dependencies: [
+    // Dependencies declare other packages that this package depends on.
+    // .package(url: /* package url */, from: "1.0.0"),
+    .package(url: "https://github.com/IBM-Swift/BlueSocket.git", from: "1.0.16")
+  ],
+  targets: [
+    // Targets are the basic building blocks of a package. A target can define a module or a test suite.
+    // Targets can depend on other targets in this package, and on products in packages which this package depends on.
+    .target(
+      name: "SwiftHttpServer",
+      dependencies: ["Socket"],
+      path: "Sources/swift-http-server"),
+    .testTarget(
+      name: "swift-http-serverTests",
+      dependencies: ["SwiftHttpServer"]),
+  ]
 )

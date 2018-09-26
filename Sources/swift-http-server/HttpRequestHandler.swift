@@ -5,7 +5,11 @@ public enum HttpRequestHandlerError: Error {
 
 public typealias HttpRequestClosure = (_ request: HttpRequest?) throws -> HttpResponse?
 
-public class HttpRequestHandler {
+public protocol HttpRequestDelegate {
+    func onHttpRequest(request: HttpRequest) throws -> HttpResponse?
+}
+
+public class HttpRequestHandler : HttpRequestDelegate {
 
     var closureHandler: HttpRequestClosure?
     
@@ -13,7 +17,7 @@ public class HttpRequestHandler {
         self.closureHandler = with
     }
     
-    func handle(request: HttpRequest) throws -> HttpResponse? {
+    public func onHttpRequest(request: HttpRequest) throws -> HttpResponse? {
         guard let closure = closureHandler else {
             throw HttpRequestHandlerError.NoOperationError
         }
