@@ -1,11 +1,11 @@
 
-public class HttpError {
+public class HttpStatusCode {
 
-    private static var _shared: HttpError?
-    public static var shared: HttpError {
+    private static var _shared: HttpStatusCode?
+    public static var shared: HttpStatusCode {
         get {
             if _shared == nil {
-                _shared = HttpError()
+                _shared = HttpStatusCode()
                 _shared![100] = "Continue"
 		        _shared![101] = "Switching Protocols"
 		        _shared![200] = "OK"

@@ -1,31 +1,57 @@
+import Foundation
+
+
+public enum RouterError: Error {
+    case invalidPattern
+}
+
+
+extension String {
+    public var fullRange: NSRange {
+        return NSRange(location: 0, length: self.count)
+    }
+}
+
+
 public class ResourceProvider {
 }
 
+
 public class Router {
-    var table: [String: HttpRequestHandler] = [:]
+    var table: [NSRegularExpression:HttpRequestHandler] = [:]
 
     subscript(path: String) -> HttpRequestHandler? {
         get {
-            return table[path]
-        }
-        set(newHandler) {
-            table[path] = newHandler
+            return dispatch(path: path)
         }
     }
 
-    public func register(path: String, handler: HttpRequestHandler?) {
-        table[path] = handler
+    public func register(pattern: String, handler: HttpRequestHandler?) throws {
+        table[try toRegex(pattern: pattern)] = handler
     }
 
-    public func register(path: String, handler: HttpRequestClosure?) {
-        table[path] = HttpRequestHandler(with: handler)
+    public func register(pattern: String, handler: HttpRequestClosure?) throws {
+        table[try toRegex(pattern: pattern)] = HttpRequestHandler(with: handler)
     }
 
-    public func unregister(path: String) {
-        table[path] = nil
+    public func unregister(pattern: String) throws {
+        table[try toRegex(pattern: pattern)] = nil
     }
 
     public func dispatch(path: String) -> HttpRequestHandler? {
-        return table[path]
+        for (pattern, handler) in table {
+            if pattern.matches(in: path, options: [], range: path.fullRange).isEmpty == false {
+                return handler
+            }
+        }
+        return nil
+    }
+
+    func toRegex(pattern: String) throws -> NSRegularExpression {
+        do {
+            return try NSRegularExpression(pattern: pattern, options: [])
+        } catch {
+            throw RouterError.invalidPattern
+        }
     }
 }

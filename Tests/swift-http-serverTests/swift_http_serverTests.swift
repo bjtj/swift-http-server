@@ -35,11 +35,11 @@ final class swift_http_serverTests: XCTestCase {
         }
     }
 
-    func testHttpServer() {
+    func testHttpServer() throws {
         let server = HttpServer(port: 0)
-        server.route(path: "/") {
+        try server.route(pattern: "/") {
             (request) in
-            let response = HttpResponse(code: 200, reason: HttpError.shared[200])
+            let response = HttpResponse(code: 200, reason: HttpStatusCode.shared[200])
             response.data = "Hello".data(using: .utf8)
             return response
         }
