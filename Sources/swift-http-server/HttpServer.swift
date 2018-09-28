@@ -21,8 +21,12 @@ public class HttpServer {
         self.reusePort = reusePort
     }
 
-    public var serverAddress: (String?, Int32?) {
-        return (listenSocket?.signature!.hostname, listenSocket?.signature!.port)
+    public var serverAddress: InetAddress? {
+        guard let hostname = listenSocket?.signature!.hostname,
+              let port = listenSocket?.signature!.port else {
+            return nil
+        }
+        return (hostname: hostname, port: port)
     }
 
     public var listeningPort: Int32 {

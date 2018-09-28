@@ -47,13 +47,19 @@ final class swift_http_serverTests: XCTestCase {
         queue.async {
             do {
                 try server.run()
-            } catch {
+            } catch let error {
+                print(error)
             }
         }
 
         sleep(1)
 
-        let req = URLRequest(url: URL(string: "http://localhost:\((server.serverAddress.1)!)")!)
+        guard let address = server.serverAddress else {
+            XCTAssert(false)
+            return
+        }
+
+        let req = URLRequest(url: URL(string: "http://localhost:\(address.port)")!)
         let session = URLSession(configuration: URLSessionConfiguration.default)
         let task = session.dataTask(with: req) {
             (data, response, error) in
