@@ -4,14 +4,14 @@ public class HttpResponse {
     private(set) var header: HttpHeader = HttpHeader()
     public var data: Data?
 
-    init(specVersion: HttpSpecVersion = .HTTP1_1, code: Int, reason: String?) {
+    public init(specVersion: HttpSpecVersion = .HTTP1_1, code: Int, reason: String?) {
         header.specVersion = specVersion
         header.firstLine.first = specVersion.rawValue
         self.code = code
         self.reason = reason
     }
 
-    var code: Int {
+    public var code: Int {
         get {
             return Int(header.firstLine.second)!
         }
@@ -20,7 +20,7 @@ public class HttpResponse {
         }
     }
 
-    var reason: String? {
+    public var reason: String? {
         get {
             return header.firstLine.third
         }
