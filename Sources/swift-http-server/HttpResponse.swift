@@ -1,8 +1,21 @@
 import Foundation
 
 public class HttpResponse {
-    private(set) var header: HttpHeader = HttpHeader()
-    public var data: Data?
+    private(set) var header = HttpHeader()
+    public var _data: Data?
+    public var data: Data? {
+        get {
+            return _data
+        }
+        set(newValue) {
+            if let data = newValue {
+                header.contentLength = data.count
+            } else {
+                header.contentLength = 0
+            }
+            _data = newValue
+        }
+    }
 
     public init(specVersion: HttpSpecVersion = .HTTP1_1, code: Int, reason: String?) {
         header.specVersion = specVersion
@@ -26,6 +39,24 @@ public class HttpResponse {
         }
         set(value) {
             header.firstLine.third = value!
+        }
+    }
+
+    public var contentType: String? {
+        get {
+            return header.contentType
+        }
+        set(newValue) {
+            header.contentType = newValue
+        }
+    }
+
+    public var contentLength: Int? {
+        get {
+            return header.contentLength
+        }
+        set(newValue) {
+            header.contentLength = newValue
         }
     }
 }

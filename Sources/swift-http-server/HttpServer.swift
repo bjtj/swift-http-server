@@ -49,28 +49,36 @@ public class HttpServer {
         }
     }
 
-    func communicate(remoteSocket: Socket?) {
+    func communicate(remoteSocket: Socket) {
 
         do {
             let headerString = try readHeaderString(remoteSocket: remoteSocket)
             let header = HttpHeader.read(text: headerString)
             let request = HttpRequest(remoteSocket: remoteSocket, header: header)
-            let response = handleRequest(request: request)
-            if response!.header.contentLength == nil {
-                if response!.data == nil {
-                    response!.header.contentLength = 0
-                } else {
-                    response!.header.contentLength = response!.data!.count
-                }
-            }
-            try remoteSocket!.write(from: response!.header.description.data(using: .utf8)!)
-            guard let data = response!.data else {
+            guard let response = handleRequest(request: request) else {
+                let response = errorResponse(code: 500)
+                try sendResponse(socket: remoteSocket, response: response)
                 return
             }
-            try remoteSocket!.write(from: data)
+            try sendResponse(socket: remoteSocket, response: response)
         } catch let error {
             print("error: \(error)")
         }
+    }
+
+    func sendResponse(socket: Socket, response: HttpResponse) throws {
+        try socket.write(from: response.header.description.data(using: .utf8)!)
+        if let data = response.data {
+            try socket.write(from: data)
+        }
+    }
+
+    func errorResponse(code: Int) -> HttpResponse {
+        let reason = HttpStatusCode.shared[code]
+        let response = HttpResponse(code: code, reason: reason!)
+        response.contentType = "text/plain"
+        response.data = "\(code) \(reason!)".data(using: .utf8)
+        return response
     }
 
     func readHeaderString(remoteSocket: Socket?) throws -> String {
