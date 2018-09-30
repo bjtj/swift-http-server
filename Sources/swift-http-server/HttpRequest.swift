@@ -2,7 +2,7 @@ import Socket
 
 public class HttpRequest {
     public var remoteSocket: Socket?
-    private(set) var header: HttpHeader = HttpHeader()
+    public var header: HttpHeader = HttpHeader()
 
     public var path: String {
         return header.firstLine.second

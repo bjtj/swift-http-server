@@ -91,7 +91,7 @@ public class HttpServer {
     func errorResponse(code: Int) -> HttpResponse {
         let reason = HttpStatusCode.shared[code]
         let response = HttpResponse(code: code, reason: reason!)
-        response.contentType = "text/plain"
+        response.header.contentType = "text/plain"
         response.data = "\(code) \(reason!)".data(using: .utf8)
         return response
     }

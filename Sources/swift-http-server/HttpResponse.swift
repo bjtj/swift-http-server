@@ -1,7 +1,7 @@
 import Foundation
 
 public class HttpResponse {
-    private(set) var header = HttpHeader()
+    public var header = HttpHeader()
     public var _data: Data?
     public var data: Data? {
         get {
@@ -55,24 +55,6 @@ public class HttpResponse {
         }
         set(value) {
             header.firstLine.third = value!
-        }
-    }
-
-    public var contentType: String? {
-        get {
-            return header.contentType
-        }
-        set(newValue) {
-            header.contentType = newValue
-        }
-    }
-
-    public var contentLength: Int? {
-        get {
-            return header.contentLength
-        }
-        set(newValue) {
-            header.contentLength = newValue
         }
     }
 }
