@@ -69,7 +69,22 @@ public class HttpServer {
     func sendResponse(socket: Socket, response: HttpResponse) throws {
         try socket.write(from: response.header.description.data(using: .utf8)!)
         if let data = response.data {
+            if response.header.transferEncoding == .chunked {
+                try socket.write(from: "\(data.count)\r\n".data(using: .utf8)!)
+            }
             try socket.write(from: data)
+        }
+        if let stream = response.stream {
+            let bufferSize = 4096
+            let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+            while stream.hasBytesAvailable {
+                let read = stream.read(buffer, maxLength: bufferSize)
+                if response.header.transferEncoding == .chunked {
+                    try socket.write(from: "\(read)\r\n".data(using: .utf8)!)
+                }
+                try socket.write(from: buffer, bufSize: read)
+            }
+            buffer.deallocate()
         }
     }
 

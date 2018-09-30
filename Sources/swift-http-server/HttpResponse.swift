@@ -16,6 +16,22 @@ public class HttpResponse {
             _data = newValue
         }
     }
+    public var _stream: InputStream?
+    public var stream: InputStream? {
+        get {
+            return _stream
+        }
+        set(newValue) {
+            _stream = newValue
+        }
+    }
+
+    public init(specVersion: HttpSpecVersion = .HTTP1_1, code: Int) {
+        header.specVersion = specVersion
+        header.firstLine.first = specVersion.rawValue
+        self.code = code
+        self.reason = HttpStatusCode.shared[code]!
+    }
 
     public init(specVersion: HttpSpecVersion = .HTTP1_1, code: Int, reason: String?) {
         header.specVersion = specVersion

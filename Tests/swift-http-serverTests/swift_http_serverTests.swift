@@ -79,8 +79,6 @@ final class swift_http_serverTests: XCTestCase {
         sleep(1)
 
         server.finish()
-
-        sleep(1)
     }
 
     func testChunkedTransfer() {
