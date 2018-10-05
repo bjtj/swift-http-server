@@ -26,7 +26,13 @@ public class HttpServer {
               let port = listenSocket?.signature!.port else {
             return nil
         }
-        return (hostname: hostname, port: port)
+        if listenSocket?.signature!.protocolFamily == .inet {
+            return InetAddress(version: .ipv4, hostname: hostname, port: port)
+        }
+        if listenSocket?.signature!.protocolFamily == .inet6 {
+            return InetAddress(version: .ipv6, hostname: hostname, port: port)
+        }
+        return nil
     }
 
     public var listeningPort: Int32 {

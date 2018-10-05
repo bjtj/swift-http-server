@@ -7,6 +7,8 @@ final class swift_http_serverTests: XCTestCase {
         // Use XCTAssert and related functions to verify your tests produce the correct
         // results.
         XCTAssertEqual(swift_http_server().text, "Hello, World!")
+
+        print(Network.getInetAddress()?.description ?? "nil")
     }
 
     func testHttpHeader() {
@@ -58,6 +60,8 @@ final class swift_http_serverTests: XCTestCase {
             XCTAssert(false)
             return
         }
+
+        print(address.description)
 
         let req = URLRequest(url: URL(string: "http://localhost:\(address.port)")!)
         let session = URLSession(configuration: URLSessionConfiguration.default)
