@@ -33,7 +33,7 @@ public class HttpResponse {
         self.reason = HttpStatusCode.shared[code]!
     }
 
-    public init(specVersion: HttpSpecVersion = .HTTP1_1, code: Int, reason: String?) {
+    public init(specVersion: HttpSpecVersion = .HTTP1_1, code: Int, reason: String) {
         header.specVersion = specVersion
         header.firstLine.first = specVersion.rawValue
         self.code = code
@@ -49,12 +49,12 @@ public class HttpResponse {
         }
     }
 
-    public var reason: String? {
+    public var reason: String {
         get {
             return header.firstLine.third
         }
         set(value) {
-            header.firstLine.third = value!
+            header.firstLine.third = value
         }
     }
 }

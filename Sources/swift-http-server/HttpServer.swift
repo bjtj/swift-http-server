@@ -95,10 +95,9 @@ public class HttpServer {
     }
 
     func errorResponse(code: Int) -> HttpResponse {
-        let reason = HttpStatusCode.shared[code]
-        let response = HttpResponse(code: code, reason: reason!)
+        let response = HttpResponse(code: code)
         response.header.contentType = "text/plain"
-        response.data = "\(code) \(reason!)".data(using: .utf8)
+        response.data = "\(code) \(response.reason)".data(using: .utf8)
         return response
     }
 
@@ -125,12 +124,12 @@ public class HttpServer {
     func handleRequest(request: HttpRequest) -> HttpResponse? {
         do {
             guard let handler = router.dispatch(path: request.path) else {
-                return HttpResponse(code: 400, reason: HttpStatusCode.shared[404])
+                return HttpResponse(code: 400)
             }
             return try handler.onHttpRequest(request: request)
         } catch let error {
             print("error: \(error)")
-            return HttpResponse(code: 500, reason: HttpStatusCode.shared[500])
+            return HttpResponse(code: 500)
         }
     }
 

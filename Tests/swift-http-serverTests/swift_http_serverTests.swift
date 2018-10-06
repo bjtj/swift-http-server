@@ -41,7 +41,7 @@ final class swift_http_serverTests: XCTestCase {
         let server = HttpServer(port: 0)
         try server.route(pattern: "/") {
             (request) in
-            let response = HttpResponse(code: 200, reason: HttpStatusCode.shared[200])
+            let response = HttpResponse(code: 200)
             response.data = "Hello".data(using: .utf8)
             return response
         }
