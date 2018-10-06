@@ -134,7 +134,7 @@ public class HttpHeader {
         return expect.hasPrefix("100-")
     }
 
-    subscript (key: String) -> String? {
+    public subscript (key: String) -> String? {
         get {
             for field in fields {
                 if field.key?.caseInsensitiveCompare(key) == .orderedSame {
