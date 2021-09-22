@@ -1,6 +1,10 @@
 import XCTest
 @testable import SwiftHttpServer
 
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
+
 final class swift_http_serverTests: XCTestCase {
     func testExample() {
         // This is an example of a functional test case.
