@@ -61,7 +61,7 @@ final class swift_http_serverTests: XCTestCase {
         sleep(1)
 
         guard let address = server.serverAddress else {
-            XCTAssert(false)
+            XCTFail("server.serverAddress failed")
             return
         }
 

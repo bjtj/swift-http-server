@@ -21,24 +21,45 @@ public class HttpServer {
         self.reusePort = reusePort
     }
 
+    /**
+     Get Server Address
+     */
     public var serverAddress: InetAddress? {
-        guard let hostname = listenSocket?.signature!.hostname,
-              let port = listenSocket?.signature!.port else {
+
+        guard let listenSocket = listenSocket else {
+            print("HttpServer::serverAddress error - no listen socket")
             return nil
         }
-        if listenSocket?.signature!.protocolFamily == .inet {
-            return InetAddress(version: .ipv4, hostname: hostname, port: port)
+
+        guard let signature = listenSocket.signature else {
+            print("HttpServer::serverAddress error - no signature in listen socket")
+            return nil
         }
-        if listenSocket?.signature!.protocolFamily == .inet6 {
-            return InetAddress(version: .ipv6, hostname: hostname, port: port)
+        
+        guard let hostname = signature.hostname else {
+            print("HttpServer::serverAddress error - no hostname in signature")
+            return nil
+        }
+        
+        if signature.protocolFamily == .inet {
+            return InetAddress(version: .ipv4, hostname: hostname, port: signature.port)
+        }
+        if signature.protocolFamily == .inet6 {
+            return InetAddress(version: .ipv6, hostname: hostname, port: signature.port)
         }
         return nil
     }
 
-    public var listeningPort: Int32 {
-        return listenSocket!.listeningPort
+    /**
+     Get Listening Port
+     */
+    public var listeningPort: Int32? {
+        return listenSocket?.listeningPort
     }
 
+    /**
+     Set Router
+     */
     public func route(pattern: String, handler: HttpRequestHandler?) throws {
         if handler == nil {
             try router.unregister(pattern: pattern)
@@ -47,6 +68,9 @@ public class HttpServer {
         }
     }
 
+    /**
+     Set Router
+     */
     public func route(pattern: String, handler: HttpRequestClosure?) throws {
         if handler == nil {
             try router.unregister(pattern: pattern)
@@ -149,21 +173,27 @@ public class HttpServer {
     }
 
     func loop() throws {
-        listenSocket = try Socket.create(family: .inet, type: .stream, proto: .tcp)
-        try listenSocket?.listen(on: port, maxBacklogSize: backlog, allowPortReuse: reusePort)
+        guard let listenSocket = listenSocket else {
+            print("HttpServer::loop() error - no listen socket")
+            return
+        }
+        
+        try listenSocket.listen(on: port, maxBacklogSize: backlog, allowPortReuse: reusePort)
         repeat {
-            guard let remoteSocket = try listenSocket?.acceptClientConnection() else {
-                return
-            }
+            let remoteSocket = try listenSocket.acceptClientConnection()
             onConnect(remoteSocket: remoteSocket)
         } while finishing == false
-        listenSocket?.close()
-        listenSocket = nil
+        listenSocket.close()
     }
 
     public func run() throws {
         finishing = false
+
+        listenSocket = try Socket.create(family: .inet, type: .stream, proto: .tcp)
+        
         try loop()
+
+        listenSocket = nil
     }
 
     public func finish() {
