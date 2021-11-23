@@ -1,10 +1,26 @@
 import Foundation
 import Socket
 
+/**
+  
+ */
 public enum HttpHeaderError : Error {
     case insufficentHeaderString
 }
 
+
+/**
+ 
+ */
+public protocol HttpServerDelegate {
+    func onConnect(remoteSocket: Socket)
+    func onDisconnect(remoteSocket: Socket)
+    func onHeaderCompleted(header: HttpHeader)
+}
+
+/**
+ Http Server
+ */
 public class HttpServer {
 
     var finishing = false
@@ -14,11 +30,13 @@ public class HttpServer {
     var reusePort: Bool
     var connectedSockets = [Int32: Socket]()
     let router = Router()
+    var delegate: HttpServerDelegate?
 
-    public init(port: Int = 0, backlog: Int = 5, reusePort: Bool = true) {
+    public init(port: Int = 0, backlog: Int = 5, reusePort: Bool = true, delegate: HttpServerDelegate? = nil) {
         self.port = port
         self.backlog = backlog
         self.reusePort = reusePort
+        self.delegate = delegate
     }
 
     /**
@@ -82,17 +100,21 @@ public class HttpServer {
     func communicate(remoteSocket: Socket) {
 
         do {
-            let headerString = try readHeaderString(remoteSocket: remoteSocket)
+            let (headerString, remainingData) = try readHeaderString(remoteSocket: remoteSocket)
             let header = HttpHeader.read(text: headerString)
+            delegate?.onHeaderCompleted(header:header)
             let request = HttpRequest(remoteSocket: remoteSocket, header: header)
+            // TODO: read data with content length
+            request.body = remainingData
             guard let response = handleRequest(request: request) else {
+                print("HttpServer::communicate() error - handleRequest failed")
                 let response = errorResponse(code: 500)
                 try sendResponse(socket: remoteSocket, response: response)
                 return
             }
             try sendResponse(socket: remoteSocket, response: response)
         } catch let error {
-            print("error: \(error)")
+            print("HttpServer::communicate() error: \(error)")
         }
     }
 
@@ -126,40 +148,52 @@ public class HttpServer {
         return response
     }
 
-    func readHeaderString(remoteSocket: Socket?) throws -> String {
-        var data = Data(capacity: 1)
-        var headerString = ""
+    func readHeaderString(remoteSocket: Socket?) throws -> (String, Data) {
+        var readBuffer = Data()
+        var buffer = Data()
+
+        guard let remoteSocket = remoteSocket else {
+            throw HttpServerError.custom(string: "no socket")
+        }
+        
         while self.finishing == false {
-            if try remoteSocket?.isReadableOrWritable(timeout: 1_000).0 == false {
+            if try remoteSocket.isReadableOrWritable(timeout: 1_000).0 == false {
                 continue
             }
-
-            let bytesRead = try remoteSocket?.read(into: &data)
-            if bytesRead! <= 0 {
+            let bytesRead = try remoteSocket.read(into: &readBuffer)
+            if bytesRead <= 0 {
                 throw HttpHeaderError.insufficentHeaderString
             }
-            headerString += String(data: data, encoding: .utf8)!
-            if headerString.hasSuffix("\r\n\r\n") {
-                break
+            buffer.append(readBuffer)
+            guard let range = buffer.range(of: "\r\n\r\n".data(using: .utf8)!) else {
+                continue
             }
+            let headerBuffer = buffer.subdata(in: 0..<range.lowerBound)
+
+            let header = String(data: headerBuffer, encoding: .utf8)
+            let remainingData = buffer.subdata(in: range.upperBound..<buffer.endIndex)
+
+            return (header!, remainingData)
         }
-        return headerString
+        throw HttpServerError.custom(string: "readHeaderString() failed")
     }
 
     func handleRequest(request: HttpRequest) -> HttpResponse? {
         do {
             guard let handler = router.dispatch(path: request.path) else {
-                return HttpResponse(code: 400, reason: HttpStatusCode.shared[404])
+                print("response 404!")
+                return HttpResponse(code: 404, reason: HttpStatusCode.shared[404])
             }
             return try handler.onHttpRequest(request: request)
         } catch let error {
-            print("error: \(error)")
+            print("HttpServer::handleRequest() error: \(error)")
             return HttpResponse(code: 500, reason: HttpStatusCode.shared[500])
         }
     }
 
     func onConnect(remoteSocket: Socket) {
         connectedSockets[remoteSocket.socketfd] = remoteSocket
+        delegate?.onConnect(remoteSocket: remoteSocket)
         DispatchQueue.global(qos: .default).async {
             [unowned self, remoteSocket] in
             self.communicate(remoteSocket: remoteSocket)
@@ -169,7 +203,9 @@ public class HttpServer {
     }
 
     func onDisconnect(remoteSocket: Socket) {
+        delegate?.onDisconnect(remoteSocket: remoteSocket)
         connectedSockets[remoteSocket.socketfd] = nil
+        // TODO: remove socket from array
     }
 
     func loop() throws {

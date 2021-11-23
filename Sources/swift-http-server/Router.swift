@@ -1,11 +1,16 @@
 import Foundation
 
-
+/**
+ 
+ */
 public enum RouterError: Error {
     case invalidPattern
 }
 
 
+/**
+ 
+ */
 extension String {
     public var fullRange: NSRange {
         return NSRange(location: 0, length: self.count)
@@ -13,12 +18,11 @@ extension String {
 }
 
 
-public class ResourceProvider {
-}
-
-
+/**
+ // TODO: regex or wildcard match support
+ */
 public class Router {
-    var table: [NSRegularExpression:HttpRequestHandler] = [:]
+    var table: [String : HttpRequestHandler] = [:]
 
     subscript(path: String) -> HttpRequestHandler? {
         get {
@@ -26,32 +30,37 @@ public class Router {
         }
     }
 
+    /**
+     register
+     */
     public func register(pattern: String, handler: HttpRequestHandler?) throws {
-        table[try toRegex(pattern: pattern)] = handler
+        table[pattern] = handler
     }
 
+    /**
+     register
+     */
     public func register(pattern: String, handler: HttpRequestClosure?) throws {
-        table[try toRegex(pattern: pattern)] = HttpRequestHandler(with: handler)
+        table[pattern] = HttpRequestHandler(with: handler)
     }
 
+    /**
+     unregister
+     */
     public func unregister(pattern: String) throws {
-        table[try toRegex(pattern: pattern)] = nil
+        table[pattern] = nil
     }
 
+    /**
+     dispatch
+     */
     public func dispatch(path: String) -> HttpRequestHandler? {
+        // TODO: regex or wildcard match
         for (pattern, handler) in table {
-            if pattern.matches(in: path, options: [], range: path.fullRange).isEmpty == false {
+            if pattern == path {
                 return handler
             }
         }
         return nil
-    }
-
-    func toRegex(pattern: String) throws -> NSRegularExpression {
-        do {
-            return try NSRegularExpression(pattern: pattern, options: [])
-        } catch {
-            throw RouterError.invalidPattern
-        }
     }
 }

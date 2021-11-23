@@ -1,8 +1,11 @@
 import Socket
+import Foundation
 
 public class HttpRequest {
+    
     public var remoteSocket: Socket?
     public var header: HttpHeader = HttpHeader()
+    public var body: Data?
 
     public var path: String {
         return header.firstLine.second

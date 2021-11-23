@@ -1,6 +1,8 @@
 import Foundation
 
+
 public class HttpResponse {
+    
     public var header = HttpHeader()
     public var _data: Data?
     public var data: Data? {
