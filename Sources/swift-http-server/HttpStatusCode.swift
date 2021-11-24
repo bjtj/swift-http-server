@@ -1,66 +1,59 @@
+import Foundation
 
 public class HttpStatusCode {
 
-    private static var _shared: HttpStatusCode?
-    public static var shared: HttpStatusCode {
-        get {
-            if _shared == nil {
-                _shared = HttpStatusCode()
-                _shared![100] = "Continue"
-		_shared![101] = "Switching Protocols"
-		_shared![200] = "OK"
-		_shared![201] = "Created"
-		_shared![202] = "Accepted"
-		_shared![203] = "Non-Authoritative Information"
-		_shared![204] = "No Content"
-		_shared![205] = "Reset Content"
-		_shared![206] = "Partial Content"
-		_shared![300] = "Multiple Choices"
-		_shared![301] = "Moved Permanently"
-		_shared![302] = "Found"
-		_shared![303] = "See Other"
-		_shared![304] = "Not Modified"
-		_shared![305] = "Use Proxy"
-		_shared![306] = "(Unused)"
-		_shared![307] = "Temporary Redirect"
-		_shared![400] = "Bad Request"
-		_shared![401] = "Unauthorized"
-		_shared![402] = "Payment Required"
-		_shared![403] = "Forbidden"
-		_shared![404] = "Not Found"
-		_shared![405] = "Method Not Allowed"
-		_shared![406] = "Not Acceptable"
-		_shared![407] = "Proxy Authentication Required"
-		_shared![408] = "Request Timeout"
-		_shared![409] = "Conflict"
-		_shared![410] = "Gone"
-		_shared![411] = "Length Required"
-		_shared![412] = "Precondition Failed"
-		_shared![413] = "Request Entity Too Large"
-		_shared![414] = "Request-URI Too Long"
-		_shared![415] = "Unsupported Media Type"
-		_shared![416] = "Requested Range Not Satisfiable"
-		_shared![417] = "Expectation Failed"
-		_shared![500] = "Internal Server Error"
-		_shared![501] = "Not Implemented"
-		_shared![502] = "Bad Gateway"
-		_shared![503] = "Service Unavailable"
-		_shared![504] = "Gateway Timeout"
-		_shared![505] = "HTTP Version Not Supported"
-            }
-            return _shared!
-        }
-    }
+    static var shared = HttpStatusCode()
 
     var table: [Int: String] = [:]
 
     private init() {
+        table[100] = "Continue"
+	table[101] = "Switching Protocols"
+	table[200] = "OK"
+	table[201] = "Created"
+	table[202] = "Accepted"
+	table[203] = "Non-Authoritative Information"
+	table[204] = "No Content"
+	table[205] = "Reset Content"
+	table[206] = "Partial Content"
+	table[300] = "Multiple Choices"
+	table[301] = "Moved Permanently"
+	table[302] = "Found"
+	table[303] = "See Other"
+	table[304] = "Not Modified"
+	table[305] = "Use Proxy"
+	table[306] = "(Unused)"
+	table[307] = "Temporary Redirect"
+	table[400] = "Bad Request"
+	table[401] = "Unauthorized"
+	table[402] = "Payment Required"
+	table[403] = "Forbidden"
+	table[404] = "Not Found"
+	table[405] = "Method Not Allowed"
+	table[406] = "Not Acceptable"
+	table[407] = "Proxy Authentication Required"
+	table[408] = "Request Timeout"
+	table[409] = "Conflict"
+	table[410] = "Gone"
+	table[411] = "Length Required"
+	table[412] = "Precondition Failed"
+	table[413] = "Request Entity Too Large"
+	table[414] = "Request-URI Too Long"
+	table[415] = "Unsupported Media Type"
+	table[416] = "Requested Range Not Satisfiable"
+	table[417] = "Expectation Failed"
+	table[500] = "Internal Server Error"
+	table[501] = "Not Implemented"
+	table[502] = "Bad Gateway"
+	table[503] = "Service Unavailable"
+	table[504] = "Gateway Timeout"
+	table[505] = "HTTP Version Not Supported"
     }
-
+    
     subscript(code: Int) -> String? {
         get {
             return table[code]
-        }
+        }        
         set(reason) {
             table[code] = reason
         }

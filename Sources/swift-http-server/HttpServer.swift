@@ -265,18 +265,14 @@ public class HttpServer {
         DispatchQueue.global(qos: .default).async {
             [unowned self, remoteSocket] in
             self.communicate(remoteSocket: remoteSocket)
-            remoteSocket.close()
-            
-            block.wait()
-            self.onDisconnect(remoteSocket: remoteSocket)
-            block.signal()
-        }
-    }
 
-    func onDisconnect(remoteSocket: Socket) {
-        delegate?.onDisconnect(remoteSocket: remoteSocket)
-        connectedSockets[remoteSocket.socketfd] = nil
-        // TODO: remove socket from array
+            block.wait()
+            delegate?.onDisconnect(remoteSocket: remoteSocket)
+            connectedSockets[remoteSocket.socketfd] = nil
+            block.signal()
+
+            remoteSocket.close()
+        }
     }
 
     func loop() throws {
