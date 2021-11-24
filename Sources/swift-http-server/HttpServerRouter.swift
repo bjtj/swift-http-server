@@ -12,10 +12,10 @@ extension String {
  Router
  // TODO: regex or wildcard match support
  */
-public class Router {
-    var table: [String : HttpRequestHandler] = [:]
+public class HttpServerRouter {
+    var table: [String : HttpRequestHandlerDelegate] = [:]
 
-    subscript(path: String) -> HttpRequestHandler? {
+    subscript(path: String) -> HttpRequestHandlerDelegate? {
         get {
             return dispatch(path: path)
         }
@@ -24,15 +24,8 @@ public class Router {
     /**
      register router
      */
-    public func register(pattern: String, handler: HttpRequestHandler?) throws {
+    public func register(pattern: String, handler: HttpRequestHandlerDelegate?) throws {
         table[pattern] = handler
-    }
-
-    /**
-     register router
-     */
-    public func register(pattern: String, handler: HttpRequestClosure?) throws {
-        table[pattern] = HttpRequestHandler(with: handler)
     }
 
     /**
@@ -45,7 +38,7 @@ public class Router {
     /**
      dispatch router
      */
-    public func dispatch(path: String) -> HttpRequestHandler? {
+    public func dispatch(path: String) -> HttpRequestHandlerDelegate? {
         // TODO: regex or wildcard match
         for (pattern, handler) in table {
             if pattern == path {

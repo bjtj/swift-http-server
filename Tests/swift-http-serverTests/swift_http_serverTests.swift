@@ -61,20 +61,32 @@ final class swift_http_serverTests: XCTestCase {
         let delegate = MyDelegate()
         
         let server = HttpServer(port: 0, delegate: delegate)
-        
-        try server.route(pattern: "/") {
-            (request) in
-            let response = HttpResponse(code: 200, reason: HttpStatusCode.shared[200])
-            response.data = "Hello".data(using: .utf8)
-            return response
+
+        class GetHandler: HttpRequestHandlerDelegate {
+            func onHeaderCompleted(header: HttpHeader, request: HttpRequest,  response: HttpResponse) throws {
+                
+            }
+            
+            func onBodyCompleted(body: Data?, request: HttpRequest, response: HttpResponse) throws {
+                response.code = 200
+                response.data = "Hello".data(using: .utf8)
+            }
         }
 
-        try server.route(pattern: "/post") {
-            (request) in
-            let response = HttpResponse(code: 200, reason: HttpStatusCode.shared[200])
-            response.data = request.body
-            return response
+        class PostHandler: HttpRequestHandlerDelegate {
+            func onHeaderCompleted(header: HttpHeader, request: HttpRequest, response: HttpResponse) throws {
+                
+            }
+            
+            func onBodyCompleted(body: Data?, request: HttpRequest, response: HttpResponse) throws {
+                response.code = 200
+                response.data = body
+            }
         }
+        
+        try server.route(pattern: "/", handler: GetHandler())
+
+        try server.route(pattern: "/post", handler: PostHandler())
         
         let queue = DispatchQueue.global(qos: .default)
         queue.async {
@@ -92,10 +104,9 @@ final class swift_http_serverTests: XCTestCase {
             return
         }
 
-        print("Http Server Bound: \(address.description)")
+        print("Http Server bound to '\(address.description)'")
         
         helperGet(url: URL(string: "http://localhost:\(address.port)")!, expectedBody: "Hello")
-
 
         helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
                    contentType: "text/plain", body: "HiHo".data(using: .utf8)!, expectedBody: "HiHo")
@@ -318,8 +329,6 @@ final class swift_http_serverTests: XCTestCase {
         helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
                    contentType: "text/plain", body: longPacket.data(using: .utf8)!, expectedBody: longPacket)
 
-        
-
         let veryLongPacket = longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket
 
         helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
@@ -427,7 +436,7 @@ final class swift_http_serverTests: XCTestCase {
     }
 
     func testRoute() {
-        var _ = Router()
+        var _ = HttpServerRouter()
         // TODO: test it
     }
 
