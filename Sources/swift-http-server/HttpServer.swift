@@ -24,6 +24,7 @@ public class HttpServer {
     var connectedSockets = [Int32: Socket]()
     let router = HttpServerRouter()
     var delegate: HttpServerDelegate?
+    let block = DispatchSemaphore(value: 1)
 
     public init(port: Int = 0, backlog: Int = 5, reusePort: Bool = true, delegate: HttpServerDelegate? = nil) {
         self.port = port
@@ -256,13 +257,19 @@ public class HttpServer {
     }
 
     func onConnect(remoteSocket: Socket) {
+        block.wait()
         connectedSockets[remoteSocket.socketfd] = remoteSocket
+        block.signal()
+        
         delegate?.onConnect(remoteSocket: remoteSocket)
         DispatchQueue.global(qos: .default).async {
             [unowned self, remoteSocket] in
             self.communicate(remoteSocket: remoteSocket)
             remoteSocket.close()
+            
+            block.wait()
             self.onDisconnect(remoteSocket: remoteSocket)
+            block.signal()
         }
     }
 
