@@ -1,4 +1,8 @@
-class KeyValuePair {
+
+/**
+ KeyValuePair
+ */
+public class KeyValuePair {
     public var key: String?
     public var value: String?
 

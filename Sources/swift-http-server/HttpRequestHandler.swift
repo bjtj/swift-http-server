@@ -1,25 +1,19 @@
 
-/**
- 
- */
-public enum HttpRequestHandlerError: Error {
-    case NoOperationError
-}
 
 /**
- 
+ HttpRequestClojure
  */
 public typealias HttpRequestClosure = (HttpRequest) throws -> HttpResponse?
 
 /**
- 
+ HttpRequestDelegate
  */
 public protocol HttpRequestDelegate {
     func onHttpRequest(request: HttpRequest) throws -> HttpResponse?
 }
 
 /**
- 
+ HttpRequestHandler
  */
 public class HttpRequestHandler : HttpRequestDelegate {
 
@@ -30,11 +24,11 @@ public class HttpRequestHandler : HttpRequestDelegate {
     }
 
     /**
-     
+     onHttpRequest
      */
     public func onHttpRequest(request: HttpRequest) throws -> HttpResponse? {
         guard let closure = closureHandler else {
-            throw HttpRequestHandlerError.NoOperationError
+            throw HttpServerError.operationFailed(string: "No request handling function found")
         }
         return try closure(request)
     }

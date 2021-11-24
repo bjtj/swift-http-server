@@ -1,16 +1,6 @@
 import Foundation
 
-/**
- 
- */
-public enum RouterError: Error {
-    case invalidPattern
-}
 
-
-/**
- 
- */
 extension String {
     public var fullRange: NSRange {
         return NSRange(location: 0, length: self.count)
@@ -19,6 +9,7 @@ extension String {
 
 
 /**
+ Router
  // TODO: regex or wildcard match support
  */
 public class Router {
@@ -31,28 +22,28 @@ public class Router {
     }
 
     /**
-     register
+     register router
      */
     public func register(pattern: String, handler: HttpRequestHandler?) throws {
         table[pattern] = handler
     }
 
     /**
-     register
+     register router
      */
     public func register(pattern: String, handler: HttpRequestClosure?) throws {
         table[pattern] = HttpRequestHandler(with: handler)
     }
 
     /**
-     unregister
+     unregister router
      */
     public func unregister(pattern: String) throws {
         table[pattern] = nil
     }
 
     /**
-     dispatch
+     dispatch router
      */
     public func dispatch(path: String) -> HttpRequestHandler? {
         // TODO: regex or wildcard match

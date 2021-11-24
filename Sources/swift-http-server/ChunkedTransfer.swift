@@ -5,6 +5,9 @@ public enum ChunkedTransferFormatError : Error {
     case insufficientChunkData
 }
 
+/**
+ ChunkedTransfer
+ */
 public class ChunkedTransfer {
 
     var inputStream: InputStream

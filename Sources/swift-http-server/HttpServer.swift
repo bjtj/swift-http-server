@@ -1,16 +1,9 @@
 import Foundation
 import Socket
 
-/**
-  
- */
-public enum HttpHeaderError : Error {
-    case insufficentHeaderString
-}
-
 
 /**
- 
+ HttpServerDelegate
  */
 public protocol HttpServerDelegate {
     func onConnect(remoteSocket: Socket)
@@ -167,7 +160,7 @@ public class HttpServer {
             }
             let bytesRead = try remoteSocket.read(into: &readBuffer)
             if bytesRead <= 0 {
-                throw HttpHeaderError.insufficentHeaderString
+                throw HttpServerError.insufficientHeaderString
             }
             buffer.append(readBuffer)
             guard let range = buffer.range(of: "\r\n\r\n".data(using: .utf8)!) else {
