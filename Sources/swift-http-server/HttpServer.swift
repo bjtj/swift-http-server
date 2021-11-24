@@ -1,10 +1,19 @@
 import Foundation
 import Socket
 
-public enum HttpHeaderError : Error {
-    case insufficentHeaderString
+
+/**
+ HttpServerDelegate
+ */
+public protocol HttpServerDelegate {
+    func onConnect(remoteSocket: Socket)
+    func onDisconnect(remoteSocket: Socket)
+    func onHeaderCompleted(header: HttpHeader)
 }
 
+/**
+ Http Server
+ */
 public class HttpServer {
 
     var finishing = false
@@ -13,41 +22,57 @@ public class HttpServer {
     var backlog: Int
     var reusePort: Bool
     var connectedSockets = [Int32: Socket]()
-    let router = Router()
+    let router = HttpServerRouter()
+    var delegate: HttpServerDelegate?
 
-    public init(port: Int = 0, backlog: Int = 5, reusePort: Bool = true) {
+    public init(port: Int = 0, backlog: Int = 5, reusePort: Bool = true, delegate: HttpServerDelegate? = nil) {
         self.port = port
         self.backlog = backlog
         self.reusePort = reusePort
+        self.delegate = delegate
     }
 
+    /**
+     Get Server Address
+     */
     public var serverAddress: InetAddress? {
-        guard let hostname = listenSocket?.signature!.hostname,
-              let port = listenSocket?.signature!.port else {
+
+        guard let listenSocket = listenSocket else {
+            print("HttpServer::serverAddress error - no listen socket")
             return nil
         }
-        if listenSocket?.signature!.protocolFamily == .inet {
-            return InetAddress(version: .ipv4, hostname: hostname, port: port)
+
+        guard let signature = listenSocket.signature else {
+            print("HttpServer::serverAddress error - no signature in listen socket")
+            return nil
         }
-        if listenSocket?.signature!.protocolFamily == .inet6 {
-            return InetAddress(version: .ipv6, hostname: hostname, port: port)
+        
+        guard let hostname = signature.hostname else {
+            print("HttpServer::serverAddress error - no hostname in signature")
+            return nil
+        }
+        
+        if signature.protocolFamily == .inet {
+            return InetAddress(version: .ipv4, hostname: hostname, port: signature.port)
+        }
+        
+        if signature.protocolFamily == .inet6 {
+            return InetAddress(version: .ipv6, hostname: hostname, port: signature.port)
         }
         return nil
     }
 
-    public var listeningPort: Int32 {
-        return listenSocket!.listeningPort
+    /**
+     Get Listening Port
+     */
+    public var listeningPort: Int32? {
+        return listenSocket?.listeningPort
     }
 
-    public func route(pattern: String, handler: HttpRequestHandler?) throws {
-        if handler == nil {
-            try router.unregister(pattern: pattern)
-        } else {
-            try router.register(pattern: pattern, handler: handler);
-        }
-    }
-
-    public func route(pattern: String, handler: HttpRequestClosure?) throws {
+    /**
+     Set Router
+     */
+    public func route(pattern: String, handler: HttpRequestHandlerDelegate?) throws {
         if handler == nil {
             try router.unregister(pattern: pattern)
         } else {
@@ -57,18 +82,43 @@ public class HttpServer {
 
     func communicate(remoteSocket: Socket) {
 
+        readSend(remoteSocket: remoteSocket, startWithData: nil)
+    }
+
+    func readSend(remoteSocket: Socket, startWithData: Data?) {
         do {
-            let headerString = try readHeaderString(remoteSocket: remoteSocket)
+            let (headerString, remainingData) = try readHeaderString(startWithData: startWithData, remoteSocket: remoteSocket)
             let header = HttpHeader.read(text: headerString)
+            delegate?.onHeaderCompleted(header:header)
             let request = HttpRequest(remoteSocket: remoteSocket, header: header)
-            guard let response = handleRequest(request: request) else {
-                let response = errorResponse(code: 500)
-                try sendResponse(socket: remoteSocket, response: response)
+
+            guard let handler = router.dispatch(path: request.path) else {
+                try sendResponse(socket: remoteSocket, response: errorResponse(code: 404))
                 return
             }
+
+            let response = HttpResponse(code: 404)
+            
+            do {
+                try handler.onHeaderCompleted(header: header, request: request, response: response)
+            } catch let err {
+                try sendResponse(socket: remoteSocket, response: errorResponse(code: 500, customBody: "Operation Failed - with: \(err)"))
+            }
+            
+            let (body, _) = try readBody(startWithData: remainingData,
+                                         remoteSocket: remoteSocket,
+                                         contentLength: header.contentLength ?? 0)
+            request.body = body
+
+            do {
+                try handler.onBodyCompleted(body: body, request: request, response: response)
+            } catch let err {
+                try sendResponse(socket: remoteSocket, response: errorResponse(code: 500, customBody: "Operation Failed - with: \(err)"))
+            }
+            
             try sendResponse(socket: remoteSocket, response: response)
         } catch let error {
-            print("error: \(error)")
+            print("HttpServer::readSend() error: \(error)")
         }
     }
 
@@ -94,48 +144,120 @@ public class HttpServer {
         }
     }
 
-    func errorResponse(code: Int) -> HttpResponse {
-        let reason = HttpStatusCode.shared[code]
-        let response = HttpResponse(code: code, reason: reason!)
+    func errorResponse(code: Int, customBody: String? = nil) -> HttpResponse {
+        let reason = HttpStatusCode.shared[code] ?? "Unknown"
+        let response = HttpResponse(code: code, reason: reason)
         response.header.contentType = "text/plain"
-        response.data = "\(code) \(reason!)".data(using: .utf8)
+        if let body = customBody {
+            response.data = body.data(using: .utf8)
+        } else {
+            response.data = "Error: \(code) \(reason)".data(using: .utf8)
+        }
         return response
     }
 
-    func readHeaderString(remoteSocket: Socket?) throws -> String {
-        var data = Data(capacity: 1)
-        var headerString = ""
+    func readHeaderString(startWithData: Data?, remoteSocket: Socket?) throws -> (String, Data?) {
+        var readBuffer = Data()
+        var buffer = Data()
+
+        guard let remoteSocket = remoteSocket else {
+            throw HttpServerError.custom(string: "HttpServer::readHeaderString() error - No Socket")
+        }
+
+        if let startWithData = startWithData {
+            buffer.append(startWithData)
+        }
+
+        if let range = buffer.range(of: "\r\n\r\n".data(using: .utf8)!) {
+            let (header, remainingData) = splitDataWithRange(data: buffer, range: range)
+
+            guard let header = header else {
+                throw HttpServerError.custom(string: "split data failed")
+            }
+            
+            return (String(data: header, encoding: .utf8)!, remainingData)
+        }
+        
         while self.finishing == false {
-            if try remoteSocket?.isReadableOrWritable(timeout: 1_000).0 == false {
+            if try remoteSocket.isReadableOrWritable(timeout: 1_000).0 == false {
                 continue
             }
+            
+            let bytesRead = try remoteSocket.read(into: &readBuffer)
+            
+            if bytesRead <= 0 {
+                throw HttpServerError.insufficientHeaderString
+            }
+            
+            buffer.append(readBuffer)
+            
+            guard let range = buffer.range(of: "\r\n\r\n".data(using: .utf8)!) else {
+                continue
+            }
+            
+            let (header, remainingData) = splitDataWithRange(data: buffer, range: range)
 
-            let bytesRead = try remoteSocket?.read(into: &data)
-            if bytesRead! <= 0 {
-                throw HttpHeaderError.insufficentHeaderString
+            guard let header = header else {
+                throw HttpServerError.custom(string: "split data failed")
             }
-            headerString += String(data: data, encoding: .utf8)!
-            if headerString.hasSuffix("\r\n\r\n") {
-                break
-            }
+
+            return (String(data: header, encoding: .utf8)!, remainingData)
         }
-        return headerString
+        
+        throw HttpServerError.custom(string: "HttpServer::readHeaderString() failed")
     }
 
-    func handleRequest(request: HttpRequest) -> HttpResponse? {
-        do {
-            guard let handler = router.dispatch(path: request.path) else {
-                return HttpResponse(code: 400, reason: HttpStatusCode.shared[404])
-            }
-            return try handler.onHttpRequest(request: request)
-        } catch let error {
-            print("error: \(error)")
-            return HttpResponse(code: 500, reason: HttpStatusCode.shared[500])
+    func splitDataWithRange(data: Data, range: Range<Data.Index>) -> (Data?, Data?) {
+        let a = data.subdata(in: 0..<range.lowerBound)
+        let b = data.subdata(in: range.upperBound..<data.endIndex)
+        return (a, b)
+    }
+    
+    func readBody(startWithData: Data?, remoteSocket: Socket, contentLength: Int) throws -> (Data?, Data?) {
+        var bodyBuffer = Data()
+        var readBuffer = Data()
+
+        guard contentLength >= 0 else {
+            throw HttpServerError.custom(string: "Content Length must not be negative value but \(contentLength)")
         }
+
+        if contentLength == 0 {
+            return (nil, nil)
+        }
+
+        if let startWithData = startWithData {
+            bodyBuffer.append(startWithData)
+        }
+
+        if bodyBuffer.count >= contentLength {
+            return splitDataWithPostion(data: bodyBuffer, position: contentLength)
+        }
+
+        while bodyBuffer.count < contentLength && finishing == false {
+            let bytesRead = try remoteSocket.read(into: &readBuffer)
+
+            guard readBuffer.count == bytesRead else {
+                throw HttpServerError.custom(string: "HttpServer::readBody() error - insufficient read bytes \(bytesRead)")
+            }
+
+            bodyBuffer.append(readBuffer)
+            
+            if bodyBuffer.count >= contentLength {
+                return splitDataWithPostion(data: bodyBuffer, position: contentLength)
+            }
+        }
+        throw HttpServerError.custom(string: "HttpServer::readBody() failed")
+    }
+
+    func splitDataWithPostion(data: Data, position: Int) -> (Data?, Data?) {
+        let a = data.subdata(in: 0..<position)
+        let b = data.subdata(in: position..<data.endIndex)
+        return (a, b)
     }
 
     func onConnect(remoteSocket: Socket) {
         connectedSockets[remoteSocket.socketfd] = remoteSocket
+        delegate?.onConnect(remoteSocket: remoteSocket)
         DispatchQueue.global(qos: .default).async {
             [unowned self, remoteSocket] in
             self.communicate(remoteSocket: remoteSocket)
@@ -145,25 +267,30 @@ public class HttpServer {
     }
 
     func onDisconnect(remoteSocket: Socket) {
+        delegate?.onDisconnect(remoteSocket: remoteSocket)
         connectedSockets[remoteSocket.socketfd] = nil
+        // TODO: remove socket from array
     }
 
     func loop() throws {
-        listenSocket = try Socket.create(family: .inet, type: .stream, proto: .tcp)
-        try listenSocket?.listen(on: port, maxBacklogSize: backlog, allowPortReuse: reusePort)
+        guard let listenSocket = listenSocket else {
+            print("HttpServer::loop() error - no listen socket")
+            return
+        }
+        
+        try listenSocket.listen(on: port, maxBacklogSize: backlog, allowPortReuse: reusePort)
         repeat {
-            guard let remoteSocket = try listenSocket?.acceptClientConnection() else {
-                return
-            }
+            let remoteSocket = try listenSocket.acceptClientConnection()
             onConnect(remoteSocket: remoteSocket)
         } while finishing == false
-        listenSocket?.close()
-        listenSocket = nil
+        listenSocket.close()
     }
 
     public func run() throws {
         finishing = false
+        listenSocket = try Socket.create(family: .inet, type: .stream, proto: .tcp)
         try loop()
+        listenSocket = nil
     }
 
     public func finish() {

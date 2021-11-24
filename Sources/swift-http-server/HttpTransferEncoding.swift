@@ -1,3 +1,7 @@
+
+/**
+ HttpTransferEncoding
+ */
 public enum HttpTransferEncoding: String {
     case chunked = "chunked"
     case compress = "compress"

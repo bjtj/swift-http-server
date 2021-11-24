@@ -1,5 +1,8 @@
 import Foundation
 
+/**
+ Network
+ */
 public class Network {
 
     public static func getInetAddress(targetVersion: InetVersion = .ipv4) -> InetAddress? {

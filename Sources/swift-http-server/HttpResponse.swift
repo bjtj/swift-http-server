@@ -1,6 +1,11 @@
 import Foundation
 
+
+/**
+ HttpResponse
+ */
 public class HttpResponse {
+    
     public var header = HttpHeader()
     public var _data: Data?
     public var data: Data? {
@@ -30,14 +35,14 @@ public class HttpResponse {
         header.specVersion = specVersion
         header.firstLine.first = specVersion.rawValue
         self.code = code
-        self.reason = HttpStatusCode.shared[code]!
+        self.reason = HttpStatusCode.shared[code] ?? "Unknown"
     }
 
     public init(specVersion: HttpSpecVersion = .HTTP1_1, code: Int, reason: String?) {
         header.specVersion = specVersion
         header.firstLine.first = specVersion.rawValue
         self.code = code
-        self.reason = reason
+        self.reason = reason ?? "Unknown"
     }
 
     public var code: Int {
