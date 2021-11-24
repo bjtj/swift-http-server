@@ -75,7 +75,7 @@ public class HttpServer {
      */
     public func route(pattern: String, handler: HttpRequestHandlerDelegate?) throws {
         if handler == nil {
-            try router.unregister(pattern: pattern)
+            router.unregister(pattern: pattern)
         } else {
             try router.register(pattern: pattern, handler: handler);
         }

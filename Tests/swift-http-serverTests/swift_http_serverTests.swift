@@ -85,7 +85,6 @@ final class swift_http_serverTests: XCTestCase {
         }
         
         try server.route(pattern: "/", handler: GetHandler())
-
         try server.route(pattern: "/post", handler: PostHandler())
         
         let queue = DispatchQueue.global(qos: .default)
@@ -435,11 +434,6 @@ final class swift_http_serverTests: XCTestCase {
         // Connection: close
     }
 
-    func testRoute() {
-        var _ = HttpServerRouter()
-        // TODO: test it
-    }
-
     static var allTests = [
       ("testExample", testExample),
       ("testHttpHeader", testHttpHeader),
@@ -447,6 +441,5 @@ final class swift_http_serverTests: XCTestCase {
       ("testHttpServer", testHttpServer),
       ("testChunkedTransfer", testChunkedTransfer),
       ("testKeepConnect", testKeepConnect),
-      ("testRoute", testRoute),
     ]
 }
