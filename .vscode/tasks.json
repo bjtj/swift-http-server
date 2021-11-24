@@ -1,0 +1,10 @@
+{
+    "version": "0.2.0",
+    "tasks": [
+        {
+            "label": "swift-build",
+            "type": "shell",
+            "command": "swift build"
+        }
+    ]
+}
