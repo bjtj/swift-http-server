@@ -62,6 +62,7 @@ public class HttpServer {
         if signature.protocolFamily == .inet {
             return InetAddress(version: .ipv4, hostname: hostname, port: signature.port)
         }
+        
         if signature.protocolFamily == .inet6 {
             return InetAddress(version: .ipv6, hostname: hostname, port: signature.port)
         }
@@ -104,8 +105,12 @@ public class HttpServer {
             let header = HttpHeader.read(text: headerString)
             delegate?.onHeaderCompleted(header:header)
             let request = HttpRequest(remoteSocket: remoteSocket, header: header)
-            // TODO: read data with content length
-            request.body = remainingData
+            let (body, _) = try readBody(remainingData: remainingData,
+                                         remoteSocket: remoteSocket,
+                                         contentLength: header.contentLength ?? 0)
+            if let body = body {
+                request.body = body
+            }
             guard let response = handleRequest(request: request) else {
                 print("HttpServer::communicate() error - handleRequest failed")
                 let response = errorResponse(code: 500)
@@ -176,6 +181,44 @@ public class HttpServer {
             return (header!, remainingData)
         }
         throw HttpServerError.custom(string: "readHeaderString() failed")
+    }
+
+    func readBody(remainingData: Data?, remoteSocket: Socket, contentLength: Int) throws -> (Data?, Data?) {
+        var bodyBuffer = Data()
+        var readBuffer = Data()
+
+        guard contentLength >= 0 else {
+            throw HttpServerError.custom(string: "Content Length must not be negative value but \(contentLength)")
+        }
+
+        if contentLength == 0 {
+            return (nil, nil)
+        }
+
+        if let remainingData = remainingData {
+            bodyBuffer.append(remainingData)
+        }
+
+        if bodyBuffer.count >= contentLength {
+            return (bodyBuffer.subdata(in: 0..<contentLength),
+                    bodyBuffer.subdata(in: contentLength..<bodyBuffer.endIndex))
+        }
+
+        while bodyBuffer.count < contentLength && finishing == false {
+            let bytesRead = try remoteSocket.read(into: &readBuffer)
+
+            guard readBuffer.count == bytesRead else {
+                throw HttpServerError.custom(string: "HttpServer::readBody() error - insufficient read bytes \(bytesRead)")
+            }
+
+            bodyBuffer.append(readBuffer)
+            
+            if bodyBuffer.count >= contentLength {
+                return (bodyBuffer.subdata(in: 0..<contentLength),
+                        bodyBuffer.subdata(in: contentLength..<bodyBuffer.endIndex))
+            }
+        }
+        throw HttpServerError.custom(string: "HttpServer::readBody() failed")
     }
 
     func handleRequest(request: HttpRequest) -> HttpResponse? {

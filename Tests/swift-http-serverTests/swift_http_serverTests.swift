@@ -69,8 +69,6 @@ final class swift_http_serverTests: XCTestCase {
             return response
         }
 
-        sleep(1)
-        
         try server.route(pattern: "/post") {
             (request) in
             let response = HttpResponse(code: 200, reason: HttpStatusCode.shared[200])
@@ -98,12 +96,10 @@ final class swift_http_serverTests: XCTestCase {
         
         helperGet(url: URL(string: "http://localhost:\(address.port)")!, expectedBody: "Hello")
 
-        sleep(1)
 
         helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
                    contentType: "text/plain", body: "HiHo".data(using: .utf8)!, expectedBody: "HiHo")
 
-        sleep(1)
 
         let longPacket = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
           "<CATALOG>" +
@@ -322,6 +318,13 @@ final class swift_http_serverTests: XCTestCase {
         helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
                    contentType: "text/plain", body: longPacket.data(using: .utf8)!, expectedBody: longPacket)
 
+        
+
+        let veryLongPacket = longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket
+
+        helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
+                   contentType: "text/plain", body: veryLongPacket.data(using: .utf8)!, expectedBody: veryLongPacket)
+
         sleep(1)
 
         server.finish()
@@ -333,7 +336,7 @@ final class swift_http_serverTests: XCTestCase {
         let task = session.dataTask(with: req) {
             (data, response, error) in
             guard error == nil else {
-                print("error: \(error!)")
+                print("helperGet() - error: \(error!)")
                 return
             }
             guard let _data = data else {
@@ -346,6 +349,7 @@ final class swift_http_serverTests: XCTestCase {
     }
 
     func helperPost(url: URL, contentType: String, body: Data, expectedBody: String) {
+        print("Data size: \(body.count)")
         let session = URLSession(configuration: URLSessionConfiguration.default)
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
@@ -354,7 +358,7 @@ final class swift_http_serverTests: XCTestCase {
         let task = session.dataTask(with: req) {
             (data, response, error) in
             guard error == nil else {
-                print("error: \(error!)")
+                print("helperPost() - error: \(error!)")
                 return
             }
             guard let _data = data else {
