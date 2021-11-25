@@ -170,9 +170,9 @@ public class HttpServer {
         }
 
         if let range = buffer.range(of: "\r\n\r\n".data(using: .utf8)!) {
-            let (header, remainingData) = splitDataWithRange(data: buffer, range: range)
+            let (headerData, remainingData) = splitDataWithRange(data: buffer, range: range)
 
-            guard let header = header else {
+            guard let header = headerData else {
                 throw HttpServerError.custom(string: "split data failed")
             }
             
@@ -196,9 +196,9 @@ public class HttpServer {
                 continue
             }
             
-            let (header, remainingData) = splitDataWithRange(data: buffer, range: range)
+            let (headerData, remainingData) = splitDataWithRange(data: buffer, range: range)
 
-            guard let header = header else {
+            guard let header = headerData else {
                 throw HttpServerError.custom(string: "split data failed")
             }
 
@@ -257,19 +257,19 @@ public class HttpServer {
     }
 
     func onConnect(remoteSocket: Socket) {
-        block.wait()
+        self.block.wait()
         connectedSockets[remoteSocket.socketfd] = remoteSocket
-        block.signal()
+        self.block.signal()
         
         delegate?.onConnect(remoteSocket: remoteSocket)
         DispatchQueue.global(qos: .default).async {
             [unowned self, remoteSocket] in
             self.communicate(remoteSocket: remoteSocket)
 
-            block.wait()
-            delegate?.onDisconnect(remoteSocket: remoteSocket)
-            connectedSockets[remoteSocket.socketfd] = nil
-            block.signal()
+            self.block.wait()
+            self.delegate?.onDisconnect(remoteSocket: remoteSocket)
+            self.connectedSockets[remoteSocket.socketfd] = nil
+            self.block.signal()
 
             remoteSocket.close()
         }
