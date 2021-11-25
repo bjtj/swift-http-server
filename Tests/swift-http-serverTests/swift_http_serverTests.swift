@@ -13,8 +13,6 @@ final class swift_http_serverTests: XCTestCase {
         // Use XCTAssert and related functions to verify your tests produce the correct
         // results.
         XCTAssertEqual(swift_http_server().text, "Hello, World!")
-
-        print(Network.getInetAddress()?.description ?? "nil")
     }
 
     func testHttpHeader() {
@@ -41,6 +39,80 @@ final class swift_http_serverTests: XCTestCase {
         } else {
             XCTAssert(false)
         }
+    }
+
+    func testHttpServerBind() -> Void {
+        
+        let addresses = Network.getInetAddresses()
+        
+        for address in addresses {
+            print("ADDR: \(address.description)")
+        }
+
+        // -----------------------
+
+        do {
+
+            let server = HttpServer(port: 0)
+            DispatchQueue.global(qos: .default).async {
+                do {
+                    try server.run()
+                } catch let error {
+                    print(error)
+                }
+            }
+            sleep(1)
+            print(server.serverAddress!.description)
+            server.finish()
+
+        }
+
+        // -----------------------
+
+        do {
+
+            let hostname = Network.getInetAddress()!.hostname
+            let server = HttpServer(hostname: hostname, port: 0)
+            DispatchQueue.global(qos: .default).async {
+                do {
+                    try server.run()
+                } catch let error {
+                    print(error)
+                }
+            }
+            sleep(1)
+            guard let address = server.serverAddress else {
+                XCTFail("no server.serverAddress")
+                return
+            }
+            print(address.description)
+            XCTAssertEqual(hostname, address.hostname)
+            server.finish()
+        }
+
+        // -----------------------
+
+        // do {
+        //     let hostname = Network.getInetAddress()!.hostname
+        //     let port = 9999
+        //     let server = HttpServer(hostname: hostname, port: port)
+        //     DispatchQueue.global(qos: .default).async {
+        //         do {
+        //             try server.run()
+        //         } catch let error {
+        //             print(error)
+        //         }
+        //     }
+        //     sleep(1)
+        //     guard let address = server.serverAddress else {
+        //         XCTFail("no server.serverAddress")
+        //         return
+        //     }
+        //     print(address.description)
+        //     XCTAssertEqual(hostname, address.hostname)
+        //     XCTAssertEqual(Int32(port), address.port)
+        //     server.finish()
+        // }
     }
 
     func testHttpServer() throws {
@@ -103,7 +175,7 @@ final class swift_http_serverTests: XCTestCase {
             return
         }
 
-        print("Http Server bound to '\(address.description)'")
+        print("Http Server is bound to '\(address.description)'")
         
         helperGet(url: URL(string: "http://localhost:\(address.port)")!, expectedBody: "Hello")
 
@@ -439,6 +511,7 @@ final class swift_http_serverTests: XCTestCase {
       ("testHttpHeader", testHttpHeader),
       ("testHttpHeaderReader", testHttpHeaderReader),
       ("testHttpServer", testHttpServer),
+      ("testHttpServerBind", testHttpServerBind),
       ("testChunkedTransfer", testChunkedTransfer),
       ("testKeepConnect", testKeepConnect),
     ]

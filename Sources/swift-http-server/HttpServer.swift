@@ -18,6 +18,7 @@ public class HttpServer {
 
     var finishing = false
     var listenSocket: Socket?
+    var hostname: String?
     var port: Int
     var backlog: Int
     var reusePort: Bool
@@ -26,7 +27,8 @@ public class HttpServer {
     var delegate: HttpServerDelegate?
     let block = DispatchSemaphore(value: 1)
 
-    public init(port: Int = 0, backlog: Int = 5, reusePort: Bool = true, delegate: HttpServerDelegate? = nil) {
+    public init(hostname: String? = nil, port: Int = 0, backlog: Int = 5, reusePort: Bool = true, delegate: HttpServerDelegate? = nil) {
+        self.hostname = hostname
         self.port = port
         self.backlog = backlog
         self.reusePort = reusePort
@@ -281,7 +283,7 @@ public class HttpServer {
             return
         }
         
-        try listenSocket.listen(on: port, maxBacklogSize: backlog, allowPortReuse: reusePort)
+        try listenSocket.listen(on: port, maxBacklogSize: backlog, allowPortReuse: reusePort, node: hostname)
         repeat {
             let remoteSocket = try listenSocket.acceptClientConnection()
             onConnect(remoteSocket: remoteSocket)
