@@ -140,25 +140,10 @@ final class swift_http_serverTests: XCTestCase {
      http server test
      */
     func testHttpServer() throws {
-
-        class MyDelegate: HttpServerDelegate {
-            init() {
-            }
-            func onConnect(remoteSocket: Socket) {
-                print("CONNECTED - \(remoteSocket.signature!.hostname!):\(remoteSocket.signature!.port)")
-            }
-            func onDisconnect(remoteSocket: Socket) {
-            }
-            func onHeaderCompleted(header: HttpHeader) {
-                print("HEADER COMPLETED: \(header.firstLine.description)")
-            }
-        }
-
-        let delegate = MyDelegate()
         
-        let server = HttpServer(port: 0, delegate: delegate)
+        let server = HttpServer(port: 0)
 
-        class GetHandler: HttpRequestHandlerDelegate {
+        class GetHandler: HttpRequestHandler {
             func onHeaderCompleted(header: HttpHeader, request: HttpRequest,  response: HttpResponse) throws {
                 
             }
@@ -169,7 +154,7 @@ final class swift_http_serverTests: XCTestCase {
             }
         }
 
-        class PostHandler: HttpRequestHandlerDelegate {
+        class PostHandler: HttpRequestHandler {
             func onHeaderCompleted(header: HttpHeader, request: HttpRequest, response: HttpResponse) throws {
                 
             }
@@ -186,280 +171,283 @@ final class swift_http_serverTests: XCTestCase {
         let queue = DispatchQueue.global(qos: .default)
         queue.async {
             do {
-                try server.run()
+                try server.run() {
+                    (server, error) in
+                    guard error == nil else {
+                        XCTFail("server.run() failed - \(error!)")
+                        return
+                    }
+                    XCTAssertNotNil(server.serverAddress)
+                    guard let address = server.serverAddress else {
+                        XCTFail("server.serverAddress failed")
+                        return
+                    }
+                    print("Http Server is bound to '\(address.description)'")
+
+                    self.calledMap["get"] = false
+                    self.calledMap["post1"] = false
+                    self.calledMap["post2"] = false
+                    self.calledMap["post3"] = false
+                    self.calledMap["post4"] = false
+                    self.calledMap["post5"] = false
+
+                    self.helperGet(url: URL(string: "http://localhost:\(address.port)")!, expectedBody: "Hello",
+                              name: "get")
+
+                    self.helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
+                               contentType: "text/plain", body: "HiHo".data(using: .utf8)!, expectedBody: "HiHo",
+                               name: "post1")
+
+
+                    let longPacket = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+                      "<CATALOG>" +
+                      "  <CD>" +
+                      "    <TITLE>Empire Burlesque</TITLE>" +
+                      "    <ARTIST>Bob Dylan</ARTIST>" +
+                      "    <COUNTRY>USA</COUNTRY>" +
+                      "    <COMPANY>Columbia</COMPANY>" +
+                      "    <PRICE>10.90</PRICE>" +
+                      "    <YEAR>1985</YEAR>" +
+                      "  </CD>" +
+                      "  <CD>" +
+                      "    <TITLE>Hide your heart</TITLE>" +
+                      "    <ARTIST>Bonnie Tyler</ARTIST>" +
+                      "    <COUNTRY>UK</COUNTRY>" +
+                      "    <COMPANY>CBS Records</COMPANY>" +
+                      "    <PRICE>9.90</PRICE>" +
+                      "    <YEAR>1988</YEAR>" +
+                      "  </CD>" +
+                      "  <CD>" +
+                      "    <TITLE>Greatest Hits</TITLE>" +
+                      "    <ARTIST>Dolly Parton</ARTIST>" +
+                      "    <COUNTRY>USA</COUNTRY>" +
+                      "    <COMPANY>RCA</COMPANY>" +
+                      "    <PRICE>9.90</PRICE>" +
+                      "    <YEAR>1982</YEAR>" +
+                      "  </CD>" +
+                      "  <CD>" +
+                      "    <TITLE>Still got the blues</TITLE>" +
+                      "    <ARTIST>Gary Moore</ARTIST>" +
+                      "    <COUNTRY>UK</COUNTRY>" +
+                      "    <COMPANY>Virgin records</COMPANY>" +
+                      "    <PRICE>10.20</PRICE>" +
+                      "    <YEAR>1990</YEAR>" +
+                      "  </CD>" +
+                      "  <CD>" +
+                      "    <TITLE>Eros</TITLE>" +
+                      "    <ARTIST>Eros Ramazzotti</ARTIST>" +
+                      "    <COUNTRY>EU</COUNTRY>" +
+                      "    <COMPANY>BMG</COMPANY>" +
+                      "    <PRICE>9.90</PRICE>" +
+                      "    <YEAR>1997</YEAR>" +
+                      "  </CD>" +
+                      "  <CD>" +
+                      "    <TITLE>One night only</TITLE>" +
+                      "    <ARTIST>Bee Gees</ARTIST>" +
+                      "    <COUNTRY>UK</COUNTRY>" +
+                      "    <COMPANY>Polydor</COMPANY>" +
+                      "    <PRICE>10.90</PRICE>" +
+                      "    <YEAR>1998</YEAR>" +
+                      "  </CD>" +
+                      "  <CD>" +
+                      "    <TITLE>Sylvias Mother</TITLE>" +
+                      "    <ARTIST>Dr.Hook</ARTIST>" +
+                      "    <COUNTRY>UK</COUNTRY>" +
+                      "    <COMPANY>CBS</COMPANY>" +
+                      "    <PRICE>8.10</PRICE>" +
+                      "    <YEAR>1973</YEAR>" +
+                      "  </CD>" +
+                      "  <CD>" +
+                      "    <TITLE>Maggie May</TITLE>" +
+                      "    <ARTIST>Rod Stewart</ARTIST>" +
+                      "    <COUNTRY>UK</COUNTRY>" +
+                      "    <COMPANY>Pickwick</COMPANY>" +
+                      "    <PRICE>8.50</PRICE>" +
+                      "    <YEAR>1990</YEAR>" +
+                      "  </CD>" +
+                      "  <CD>" +
+                      "    <TITLE>Romanza</TITLE>" +
+                      "    <ARTIST>Andrea Bocelli</ARTIST>" +
+                      "    <COUNTRY>EU</COUNTRY>" +
+                      "    <COMPANY>Polydor</COMPANY>" +
+                      "    <PRICE>10.80</PRICE>" +
+                      "    <YEAR>1996</YEAR>" +
+                      "  </CD>" +
+                      "  <CD>" +
+                      "    <TITLE>When a man loves a woman</TITLE>" +
+                      "    <ARTIST>Percy Sledge</ARTIST>" +
+                      "    <COUNTRY>USA</COUNTRY>" +
+                      "    <COMPANY>Atlantic</COMPANY>" +
+                      "    <PRICE>8.70</PRICE>" +
+                      "    <YEAR>1987</YEAR>" +
+                      "  </CD>" +
+                      "  <CD>" +
+                      "    <TITLE>Black angel</TITLE>" +
+                      "    <ARTIST>Savage Rose</ARTIST>" +
+                      "    <COUNTRY>EU</COUNTRY>" +
+                      "    <COMPANY>Mega</COMPANY>" +
+                      "    <PRICE>10.90</PRICE>" +
+                      "    <YEAR>1995</YEAR>" +
+                      "  </CD>" +
+                      "  <CD>" +
+                      "    <TITLE>1999 Grammy Nominees</TITLE>" +
+                      "    <ARTIST>Many</ARTIST>" +
+                      "    <COUNTRY>USA</COUNTRY>" +
+                      "    <COMPANY>Grammy</COMPANY>" +
+                      "    <PRICE>10.20</PRICE>" +
+                      "    <YEAR>1999</YEAR>" +
+                      "  </CD>" +
+                      "  <CD>" +
+                      "    <TITLE>For the good times</TITLE>" +
+                      "    <ARTIST>Kenny Rogers</ARTIST>" +
+                      "    <COUNTRY>UK</COUNTRY>" +
+                      "    <COMPANY>Mucik Master</COMPANY>" +
+                      "    <PRICE>8.70</PRICE>" +
+                      "    <YEAR>1995</YEAR>" +
+                      "  </CD>" +
+                      "  <CD>" +
+                      "    <TITLE>Big Willie style</TITLE>" +
+                      "    <ARTIST>Will Smith</ARTIST>" +
+                      "    <COUNTRY>USA</COUNTRY>" +
+                      "    <COMPANY>Columbia</COMPANY>" +
+                      "    <PRICE>9.90</PRICE>" +
+                      "    <YEAR>1997</YEAR>" +
+                      "  </CD>" +
+                      "  <CD>" +
+                      "    <TITLE>Tupelo Honey</TITLE>" +
+                      "    <ARTIST>Van Morrison</ARTIST>" +
+                      "    <COUNTRY>UK</COUNTRY>" +
+                      "    <COMPANY>Polydor</COMPANY>" +
+                      "    <PRICE>8.20</PRICE>" +
+                      "    <YEAR>1971</YEAR>" +
+                      "  </CD>" +
+                      "  <CD>" +
+                      "    <TITLE>Soulsville</TITLE>" +
+                      "    <ARTIST>Jorn Hoel</ARTIST>" +
+                      "    <COUNTRY>Norway</COUNTRY>" +
+                      "    <COMPANY>WEA</COMPANY>" +
+                      "    <PRICE>7.90</PRICE>" +
+                      "    <YEAR>1996</YEAR>" +
+                      "  </CD>" +
+                      "  <CD>" +
+                      "    <TITLE>The very best of</TITLE>" +
+                      "    <ARTIST>Cat Stevens</ARTIST>" +
+                      "    <COUNTRY>UK</COUNTRY>" +
+                      "    <COMPANY>Island</COMPANY>" +
+                      "    <PRICE>8.90</PRICE>" +
+                      "    <YEAR>1990</YEAR>" +
+                      "  </CD>" +
+                      "  <CD>" +
+                      "    <TITLE>Stop</TITLE>" +
+                      "    <ARTIST>Sam Brown</ARTIST>" +
+                      "    <COUNTRY>UK</COUNTRY>" +
+                      "    <COMPANY>A and M</COMPANY>" +
+                      "    <PRICE>8.90</PRICE>" +
+                      "    <YEAR>1988</YEAR>" +
+                      "  </CD>" +
+                      "  <CD>" +
+                      "    <TITLE>Bridge of Spies</TITLE>" +
+                      "    <ARTIST>T'Pau</ARTIST>" +
+                      "    <COUNTRY>UK</COUNTRY>" +
+                      "    <COMPANY>Siren</COMPANY>" +
+                      "    <PRICE>7.90</PRICE>" +
+                      "    <YEAR>1987</YEAR>" +
+                      "  </CD>" +
+                      "  <CD>" +
+                      "    <TITLE>Private Dancer</TITLE>" +
+                      "    <ARTIST>Tina Turner</ARTIST>" +
+                      "    <COUNTRY>UK</COUNTRY>" +
+                      "    <COMPANY>Capitol</COMPANY>" +
+                      "    <PRICE>8.90</PRICE>" +
+                      "    <YEAR>1983</YEAR>" +
+                      "  </CD>" +
+                      "  <CD>" +
+                      "    <TITLE>Midt om natten</TITLE>" +
+                      "    <ARTIST>Kim Larsen</ARTIST>" +
+                      "    <COUNTRY>EU</COUNTRY>" +
+                      "    <COMPANY>Medley</COMPANY>" +
+                      "    <PRICE>7.80</PRICE>" +
+                      "    <YEAR>1983</YEAR>" +
+                      "  </CD>" +
+                      "  <CD>" +
+                      "    <TITLE>Pavarotti Gala Concert</TITLE>" +
+                      "    <ARTIST>Luciano Pavarotti</ARTIST>" +
+                      "    <COUNTRY>UK</COUNTRY>" +
+                      "    <COMPANY>DECCA</COMPANY>" +
+                      "    <PRICE>9.90</PRICE>" +
+                      "    <YEAR>1991</YEAR>" +
+                      "  </CD>" +
+                      "  <CD>" +
+                      "    <TITLE>The dock of the bay</TITLE>" +
+                      "    <ARTIST>Otis Redding</ARTIST>" +
+                      "    <COUNTRY>USA</COUNTRY>" +
+                      "    <COMPANY>Stax Records</COMPANY>" +
+                      "    <PRICE>7.90</PRICE>" +
+                      "    <YEAR>1968</YEAR>" +
+                      "  </CD>" +
+                      "  <CD>" +
+                      "    <TITLE>Picture book</TITLE>" +
+                      "    <ARTIST>Simply Red</ARTIST>" +
+                      "    <COUNTRY>EU</COUNTRY>" +
+                      "    <COMPANY>Elektra</COMPANY>" +
+                      "    <PRICE>7.20</PRICE>" +
+                      "    <YEAR>1985</YEAR>" +
+                      "  </CD>" +
+                      "  <CD>" +
+                      "    <TITLE>Red</TITLE>" +
+                      "    <ARTIST>The Communards</ARTIST>" +
+                      "    <COUNTRY>UK</COUNTRY>" +
+                      "    <COMPANY>London</COMPANY>" +
+                      "    <PRICE>7.80</PRICE>" +
+                      "    <YEAR>1987</YEAR>" +
+                      "  </CD>" +
+                      "  <CD>" +
+                      "    <TITLE>Unchain my heart</TITLE>" +
+                      "    <ARTIST>Joe Cocker</ARTIST>" +
+                      "    <COUNTRY>USA</COUNTRY>" +
+                      "    <COMPANY>EMI</COMPANY>" +
+                      "    <PRICE>8.20</PRICE>" +
+                      "    <YEAR>1987</YEAR>" +
+                      "  </CD>" +
+                      "</CATALOG>"
+
+                    XCTAssertTrue(longPacket.count > 4096)
+                    
+                    self.helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
+                               contentType: "text/plain", body: longPacket.data(using: .utf8)!, expectedBody: longPacket,
+                               name: "post2")
+
+                    let veryLongPacket = longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket
+
+                    self.helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
+                               contentType: "text/plain", body: veryLongPacket.data(using: .utf8)!,
+                               expectedBody: veryLongPacket,
+                               name: "post3")
+
+                    let veryveryLongPacket = veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket
+
+                    self.helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
+                               contentType: "text/plain", body: veryveryLongPacket.data(using: .utf8)!,
+                               expectedBody: veryveryLongPacket,
+                               name: "post4")
+
+                    var veryveryveryLongPacket = veryveryLongPacket
+                    for _ in 0..<100 {
+                        veryveryveryLongPacket.append(veryveryLongPacket)
+                    }
+
+                    self.helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
+                               contentType: "text/plain",
+                               body: veryveryveryLongPacket.data(using: .utf8)!,
+                               expectedBody: veryveryveryLongPacket,
+                               name: "post5")
+                }
             } catch let error {
-                print(error)
+                XCTFail("error occured - \(error)")
             }
         }
 
-        sleep(1)
-
-        guard let address = server.serverAddress else {
-            XCTFail("server.serverAddress failed")
-            return
-        }
-
-        print("Http Server is bound to '\(address.description)'")
-
-        calledMap["get"] = false
-        calledMap["post1"] = false
-        calledMap["post2"] = false
-        calledMap["post3"] = false
-        calledMap["post4"] = false
-        calledMap["post5"] = false
-
-        helperGet(url: URL(string: "http://localhost:\(address.port)")!, expectedBody: "Hello",
-                  name: "get")
-
-        helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
-                   contentType: "text/plain", body: "HiHo".data(using: .utf8)!, expectedBody: "HiHo",
-                   name: "post1")
-
-
-        let longPacket = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-          "<CATALOG>" +
-          "  <CD>" +
-          "    <TITLE>Empire Burlesque</TITLE>" +
-          "    <ARTIST>Bob Dylan</ARTIST>" +
-          "    <COUNTRY>USA</COUNTRY>" +
-          "    <COMPANY>Columbia</COMPANY>" +
-          "    <PRICE>10.90</PRICE>" +
-          "    <YEAR>1985</YEAR>" +
-          "  </CD>" +
-          "  <CD>" +
-          "    <TITLE>Hide your heart</TITLE>" +
-          "    <ARTIST>Bonnie Tyler</ARTIST>" +
-          "    <COUNTRY>UK</COUNTRY>" +
-          "    <COMPANY>CBS Records</COMPANY>" +
-          "    <PRICE>9.90</PRICE>" +
-          "    <YEAR>1988</YEAR>" +
-          "  </CD>" +
-          "  <CD>" +
-          "    <TITLE>Greatest Hits</TITLE>" +
-          "    <ARTIST>Dolly Parton</ARTIST>" +
-          "    <COUNTRY>USA</COUNTRY>" +
-          "    <COMPANY>RCA</COMPANY>" +
-          "    <PRICE>9.90</PRICE>" +
-          "    <YEAR>1982</YEAR>" +
-          "  </CD>" +
-          "  <CD>" +
-          "    <TITLE>Still got the blues</TITLE>" +
-          "    <ARTIST>Gary Moore</ARTIST>" +
-          "    <COUNTRY>UK</COUNTRY>" +
-          "    <COMPANY>Virgin records</COMPANY>" +
-          "    <PRICE>10.20</PRICE>" +
-          "    <YEAR>1990</YEAR>" +
-          "  </CD>" +
-          "  <CD>" +
-          "    <TITLE>Eros</TITLE>" +
-          "    <ARTIST>Eros Ramazzotti</ARTIST>" +
-          "    <COUNTRY>EU</COUNTRY>" +
-          "    <COMPANY>BMG</COMPANY>" +
-          "    <PRICE>9.90</PRICE>" +
-          "    <YEAR>1997</YEAR>" +
-          "  </CD>" +
-          "  <CD>" +
-          "    <TITLE>One night only</TITLE>" +
-          "    <ARTIST>Bee Gees</ARTIST>" +
-          "    <COUNTRY>UK</COUNTRY>" +
-          "    <COMPANY>Polydor</COMPANY>" +
-          "    <PRICE>10.90</PRICE>" +
-          "    <YEAR>1998</YEAR>" +
-          "  </CD>" +
-          "  <CD>" +
-          "    <TITLE>Sylvias Mother</TITLE>" +
-          "    <ARTIST>Dr.Hook</ARTIST>" +
-          "    <COUNTRY>UK</COUNTRY>" +
-          "    <COMPANY>CBS</COMPANY>" +
-          "    <PRICE>8.10</PRICE>" +
-          "    <YEAR>1973</YEAR>" +
-          "  </CD>" +
-          "  <CD>" +
-          "    <TITLE>Maggie May</TITLE>" +
-          "    <ARTIST>Rod Stewart</ARTIST>" +
-          "    <COUNTRY>UK</COUNTRY>" +
-          "    <COMPANY>Pickwick</COMPANY>" +
-          "    <PRICE>8.50</PRICE>" +
-          "    <YEAR>1990</YEAR>" +
-          "  </CD>" +
-          "  <CD>" +
-          "    <TITLE>Romanza</TITLE>" +
-          "    <ARTIST>Andrea Bocelli</ARTIST>" +
-          "    <COUNTRY>EU</COUNTRY>" +
-          "    <COMPANY>Polydor</COMPANY>" +
-          "    <PRICE>10.80</PRICE>" +
-          "    <YEAR>1996</YEAR>" +
-          "  </CD>" +
-          "  <CD>" +
-          "    <TITLE>When a man loves a woman</TITLE>" +
-          "    <ARTIST>Percy Sledge</ARTIST>" +
-          "    <COUNTRY>USA</COUNTRY>" +
-          "    <COMPANY>Atlantic</COMPANY>" +
-          "    <PRICE>8.70</PRICE>" +
-          "    <YEAR>1987</YEAR>" +
-          "  </CD>" +
-          "  <CD>" +
-          "    <TITLE>Black angel</TITLE>" +
-          "    <ARTIST>Savage Rose</ARTIST>" +
-          "    <COUNTRY>EU</COUNTRY>" +
-          "    <COMPANY>Mega</COMPANY>" +
-          "    <PRICE>10.90</PRICE>" +
-          "    <YEAR>1995</YEAR>" +
-          "  </CD>" +
-          "  <CD>" +
-          "    <TITLE>1999 Grammy Nominees</TITLE>" +
-          "    <ARTIST>Many</ARTIST>" +
-          "    <COUNTRY>USA</COUNTRY>" +
-          "    <COMPANY>Grammy</COMPANY>" +
-          "    <PRICE>10.20</PRICE>" +
-          "    <YEAR>1999</YEAR>" +
-          "  </CD>" +
-          "  <CD>" +
-          "    <TITLE>For the good times</TITLE>" +
-          "    <ARTIST>Kenny Rogers</ARTIST>" +
-          "    <COUNTRY>UK</COUNTRY>" +
-          "    <COMPANY>Mucik Master</COMPANY>" +
-          "    <PRICE>8.70</PRICE>" +
-          "    <YEAR>1995</YEAR>" +
-          "  </CD>" +
-          "  <CD>" +
-          "    <TITLE>Big Willie style</TITLE>" +
-          "    <ARTIST>Will Smith</ARTIST>" +
-          "    <COUNTRY>USA</COUNTRY>" +
-          "    <COMPANY>Columbia</COMPANY>" +
-          "    <PRICE>9.90</PRICE>" +
-          "    <YEAR>1997</YEAR>" +
-          "  </CD>" +
-          "  <CD>" +
-          "    <TITLE>Tupelo Honey</TITLE>" +
-          "    <ARTIST>Van Morrison</ARTIST>" +
-          "    <COUNTRY>UK</COUNTRY>" +
-          "    <COMPANY>Polydor</COMPANY>" +
-          "    <PRICE>8.20</PRICE>" +
-          "    <YEAR>1971</YEAR>" +
-          "  </CD>" +
-          "  <CD>" +
-          "    <TITLE>Soulsville</TITLE>" +
-          "    <ARTIST>Jorn Hoel</ARTIST>" +
-          "    <COUNTRY>Norway</COUNTRY>" +
-          "    <COMPANY>WEA</COMPANY>" +
-          "    <PRICE>7.90</PRICE>" +
-          "    <YEAR>1996</YEAR>" +
-          "  </CD>" +
-          "  <CD>" +
-          "    <TITLE>The very best of</TITLE>" +
-          "    <ARTIST>Cat Stevens</ARTIST>" +
-          "    <COUNTRY>UK</COUNTRY>" +
-          "    <COMPANY>Island</COMPANY>" +
-          "    <PRICE>8.90</PRICE>" +
-          "    <YEAR>1990</YEAR>" +
-          "  </CD>" +
-          "  <CD>" +
-          "    <TITLE>Stop</TITLE>" +
-          "    <ARTIST>Sam Brown</ARTIST>" +
-          "    <COUNTRY>UK</COUNTRY>" +
-          "    <COMPANY>A and M</COMPANY>" +
-          "    <PRICE>8.90</PRICE>" +
-          "    <YEAR>1988</YEAR>" +
-          "  </CD>" +
-          "  <CD>" +
-          "    <TITLE>Bridge of Spies</TITLE>" +
-          "    <ARTIST>T'Pau</ARTIST>" +
-          "    <COUNTRY>UK</COUNTRY>" +
-          "    <COMPANY>Siren</COMPANY>" +
-          "    <PRICE>7.90</PRICE>" +
-          "    <YEAR>1987</YEAR>" +
-          "  </CD>" +
-          "  <CD>" +
-          "    <TITLE>Private Dancer</TITLE>" +
-          "    <ARTIST>Tina Turner</ARTIST>" +
-          "    <COUNTRY>UK</COUNTRY>" +
-          "    <COMPANY>Capitol</COMPANY>" +
-          "    <PRICE>8.90</PRICE>" +
-          "    <YEAR>1983</YEAR>" +
-          "  </CD>" +
-          "  <CD>" +
-          "    <TITLE>Midt om natten</TITLE>" +
-          "    <ARTIST>Kim Larsen</ARTIST>" +
-          "    <COUNTRY>EU</COUNTRY>" +
-          "    <COMPANY>Medley</COMPANY>" +
-          "    <PRICE>7.80</PRICE>" +
-          "    <YEAR>1983</YEAR>" +
-          "  </CD>" +
-          "  <CD>" +
-          "    <TITLE>Pavarotti Gala Concert</TITLE>" +
-          "    <ARTIST>Luciano Pavarotti</ARTIST>" +
-          "    <COUNTRY>UK</COUNTRY>" +
-          "    <COMPANY>DECCA</COMPANY>" +
-          "    <PRICE>9.90</PRICE>" +
-          "    <YEAR>1991</YEAR>" +
-          "  </CD>" +
-          "  <CD>" +
-          "    <TITLE>The dock of the bay</TITLE>" +
-          "    <ARTIST>Otis Redding</ARTIST>" +
-          "    <COUNTRY>USA</COUNTRY>" +
-          "    <COMPANY>Stax Records</COMPANY>" +
-          "    <PRICE>7.90</PRICE>" +
-          "    <YEAR>1968</YEAR>" +
-          "  </CD>" +
-          "  <CD>" +
-          "    <TITLE>Picture book</TITLE>" +
-          "    <ARTIST>Simply Red</ARTIST>" +
-          "    <COUNTRY>EU</COUNTRY>" +
-          "    <COMPANY>Elektra</COMPANY>" +
-          "    <PRICE>7.20</PRICE>" +
-          "    <YEAR>1985</YEAR>" +
-          "  </CD>" +
-          "  <CD>" +
-          "    <TITLE>Red</TITLE>" +
-          "    <ARTIST>The Communards</ARTIST>" +
-          "    <COUNTRY>UK</COUNTRY>" +
-          "    <COMPANY>London</COMPANY>" +
-          "    <PRICE>7.80</PRICE>" +
-          "    <YEAR>1987</YEAR>" +
-          "  </CD>" +
-          "  <CD>" +
-          "    <TITLE>Unchain my heart</TITLE>" +
-          "    <ARTIST>Joe Cocker</ARTIST>" +
-          "    <COUNTRY>USA</COUNTRY>" +
-          "    <COMPANY>EMI</COMPANY>" +
-          "    <PRICE>8.20</PRICE>" +
-          "    <YEAR>1987</YEAR>" +
-          "  </CD>" +
-          "</CATALOG>"
-
-        XCTAssertTrue(longPacket.count > 4096)
-        
-        helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
-                   contentType: "text/plain", body: longPacket.data(using: .utf8)!, expectedBody: longPacket,
-                   name: "post2")
-
-        let veryLongPacket = longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket
-
-        helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
-                   contentType: "text/plain", body: veryLongPacket.data(using: .utf8)!,
-                   expectedBody: veryLongPacket,
-                   name: "post3")
-
-        let veryveryLongPacket = veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket
-
-        helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
-                   contentType: "text/plain", body: veryveryLongPacket.data(using: .utf8)!,
-                   expectedBody: veryveryLongPacket,
-                   name: "post4")
-
-        var veryveryveryLongPacket = veryveryLongPacket
-        for _ in 0..<100 {
-            veryveryveryLongPacket.append(veryveryLongPacket)
-        }
-
-        helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
-                   contentType: "text/plain",
-                   body: veryveryveryLongPacket.data(using: .utf8)!,
-                   expectedBody: veryveryveryLongPacket,
-                   name: "post5")
-
-        sleep(1)
+        sleep(3)
 
         server.finish()
 

@@ -13,7 +13,7 @@ final class RouterTests: XCTestCase {
             
             var router = HttpServerRouter()
 
-            class MyHandler: HttpRequestHandlerDelegate {
+            class MyHandler: HttpRequestHandler {
 
                 let responseBody: String
                 

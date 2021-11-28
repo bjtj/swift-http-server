@@ -7,9 +7,9 @@ import Foundation
 class Matcher {
     let pattern: String
     let prefix: String?
-    var handler: HttpRequestHandlerDelegate
+    var handler: HttpRequestHandler
 
-    init(pattern: String, handler: HttpRequestHandlerDelegate) {
+    init(pattern: String, handler: HttpRequestHandler) {
         self.pattern = pattern
         self.handler = handler
 
@@ -36,7 +36,7 @@ public class HttpServerRouter {
 
     var table = [Matcher]()
     
-    subscript(path: String) -> HttpRequestHandlerDelegate? {
+    subscript(path: String) -> HttpRequestHandler? {
         get {
             return dispatch(path: path)
         }
@@ -45,7 +45,7 @@ public class HttpServerRouter {
     /**
      register router
      */
-    public func register(pattern: String, handler: HttpRequestHandlerDelegate?) throws {
+    public func register(pattern: String, handler: HttpRequestHandler?) throws {
 
         guard let handler = handler else {
             throw HttpServerError.illegalArgument(string: "handler is nil")
@@ -75,7 +75,7 @@ public class HttpServerRouter {
     /**
      dispatch router
      */
-    public func dispatch(path: String) -> HttpRequestHandlerDelegate? {
+    public func dispatch(path: String) -> HttpRequestHandler? {
         return table.first(where: { $0.match(path: path) })?.handler
     }
 }

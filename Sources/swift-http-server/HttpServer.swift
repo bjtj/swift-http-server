@@ -3,15 +3,6 @@ import Socket
 
 
 /**
- HttpServerDelegate
- */
-public protocol HttpServerDelegate {
-    func onConnect(remoteSocket: Socket)
-    func onDisconnect(remoteSocket: Socket)
-    func onHeaderCompleted(header: HttpHeader)
-}
-
-/**
  Http Server
  */
 public class HttpServer {
@@ -35,16 +26,14 @@ public class HttpServer {
         }
     }
     let router = HttpServerRouter()
-    var delegate: HttpServerDelegate?
     let lockQueue = DispatchQueue(label: "com.tjapp.swiftHttpServer.lockQueue")
     var bufferSize = 4096
 
-    public init(hostname: String? = nil, port: Int = 0, backlog: Int = 5, reusePort: Bool = true, delegate: HttpServerDelegate? = nil) {
+    public init(hostname: String? = nil, port: Int = 0, backlog: Int = 5, reusePort: Bool = true) {
         self.hostname = hostname
         self.port = port
         self.backlog = backlog
         self.reusePort = reusePort
-        self.delegate = delegate
     }
 
     /**
@@ -87,7 +76,7 @@ public class HttpServer {
     /**
      Set Router
      */
-    public func route(pattern: String, handler: HttpRequestHandlerDelegate?) throws {
+    public func route(pattern: String, handler: HttpRequestHandler?) throws {
         if handler == nil {
             router.unregister(pattern: pattern)
         } else {
@@ -98,32 +87,38 @@ public class HttpServer {
     /**
      run
      */
-    public func run() throws {
+    public func run(readyHandler: ((HttpServer, Error?) -> Void)? = nil) throws {
         finishing = false
         _running = true
         listenSocket = try Socket.create(family: .inet, type: .stream, proto: .tcp)
-        try loop()
+        try prepare()
+        readyHandler?(self, nil)
+        loop()
         listenSocket = nil
         _running = false
     }
 
-    func loop() throws {
+    func prepare() throws {
+        guard let listenSocket = listenSocket else {
+            throw HttpServerError.custom(string: "HttpServer::prepare() error - no listen socket")
+        }
+        try listenSocket.listen(on: port, maxBacklogSize: backlog, allowPortReuse: reusePort, node: hostname)
+    }
+
+    func loop() {
         guard let listenSocket = listenSocket else {
             print("HttpServer::loop() error - no listen socket")
             return
         }
-        try listenSocket.listen(on: port, maxBacklogSize: backlog, allowPortReuse: reusePort, node: hostname)
         repeat {
             do {
                 let remoteSocket = try listenSocket.acceptClientConnection()
                 onConnect(remoteSocket: remoteSocket)
             } catch let error {
-
                 guard let socketError = error as? Socket.Error else {
 					print("HttpServer::loop() - Unexpected error...\n \(error)")
 					break
 				}
-				
 				if !self.finishing {
 					print("HttpServer::loop() error reported:\n \(socketError.description)")
                 }
@@ -139,12 +134,10 @@ public class HttpServer {
             self.connectedSockets[remoteSocket.socketfd] = remoteSocket
         }
         
-        delegate?.onConnect(remoteSocket: remoteSocket)
         DispatchQueue.global(qos: .default).async {
             [unowned self, remoteSocket] in
             self.communicate(remoteSocket: remoteSocket)
 
-            self.delegate?.onDisconnect(remoteSocket: remoteSocket)
             self.lockQueue.sync { [unowned self, remoteSocket] in
                 self.connectedSockets[remoteSocket.socketfd] = nil
             }
@@ -161,7 +154,6 @@ public class HttpServer {
         do {
             let (headerString, remainingData) = try readHeaderString(startWithData: startWithData, remoteSocket: remoteSocket)
             let header = HttpHeader.read(text: headerString)
-            delegate?.onHeaderCompleted(header:header)
             let request = HttpRequest(remoteSocket: remoteSocket, header: header)
 
             guard let handler = router.dispatch(path: request.path) else {
