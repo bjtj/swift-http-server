@@ -8,6 +8,12 @@ import FoundationNetworking
 import Socket
 
 final class swift_http_serverTests: XCTestCase {
+
+    var calledMap = [String:Bool]()
+    
+    /**
+     example
+     */
     func testExample() {
         // This is an example of a functional test case.
         // Use XCTAssert and related functions to verify your tests produce the correct
@@ -15,12 +21,18 @@ final class swift_http_serverTests: XCTestCase {
         XCTAssertEqual(swift_http_server().text, "Hello, World!")
     }
 
+    /**
+     http header test
+     */
     func testHttpHeader() {
         let text = "GET / HTTP/1.1\r\nLocation: http://example.com\r\nExt: \r\n\r\n"
         let header = HttpHeader.read(text: text)
         XCTAssertEqual(header.description, text)
     }
 
+    /**
+     http header reader test
+     */
     func testHttpHeaderReader() {
         let text = "GET / HTTP/1.1\r\nLocation: http://example.com\r\nExt: \r\n\r\n"
 
@@ -41,12 +53,16 @@ final class swift_http_serverTests: XCTestCase {
         }
     }
 
+    /**
+     http server bind test
+     */
     func testHttpServerBind() -> Void {
         
         let addresses = Network.getInetAddresses()
-        
+
+        print(" == Network.getInetAddresses() ==")
         for address in addresses {
-            print("ADDR: \(address.description)")
+            print("- INET Address: \(address.description)")
         }
 
         // -----------------------
@@ -62,9 +78,14 @@ final class swift_http_serverTests: XCTestCase {
                 }
             }
             sleep(1)
+            
             print(server.serverAddress!.description)
             server.finish()
 
+            sleep(1)
+
+            XCTAssertFalse(server.running)
+            XCTAssertEqual(server.connectedSocketCount, 0)
         }
 
         // -----------------------
@@ -115,6 +136,9 @@ final class swift_http_serverTests: XCTestCase {
         // }
     }
 
+    /**
+     http server test
+     */
     func testHttpServer() throws {
 
         class MyDelegate: HttpServerDelegate {
@@ -176,11 +200,20 @@ final class swift_http_serverTests: XCTestCase {
         }
 
         print("Http Server is bound to '\(address.description)'")
-        
-        helperGet(url: URL(string: "http://localhost:\(address.port)")!, expectedBody: "Hello")
+
+        calledMap["get"] = false
+        calledMap["post1"] = false
+        calledMap["post2"] = false
+        calledMap["post3"] = false
+        calledMap["post4"] = false
+        calledMap["post5"] = false
+
+        helperGet(url: URL(string: "http://localhost:\(address.port)")!, expectedBody: "Hello",
+                  name: "get")
 
         helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
-                   contentType: "text/plain", body: "HiHo".data(using: .utf8)!, expectedBody: "HiHo")
+                   contentType: "text/plain", body: "HiHo".data(using: .utf8)!, expectedBody: "HiHo",
+                   name: "post1")
 
 
         let longPacket = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
@@ -398,19 +431,47 @@ final class swift_http_serverTests: XCTestCase {
         XCTAssertTrue(longPacket.count > 4096)
         
         helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
-                   contentType: "text/plain", body: longPacket.data(using: .utf8)!, expectedBody: longPacket)
+                   contentType: "text/plain", body: longPacket.data(using: .utf8)!, expectedBody: longPacket,
+                   name: "post2")
 
         let veryLongPacket = longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket
 
         helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
-                   contentType: "text/plain", body: veryLongPacket.data(using: .utf8)!, expectedBody: veryLongPacket)
+                   contentType: "text/plain", body: veryLongPacket.data(using: .utf8)!,
+                   expectedBody: veryLongPacket,
+                   name: "post3")
+
+        let veryveryLongPacket = veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket
+
+        helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
+                   contentType: "text/plain", body: veryveryLongPacket.data(using: .utf8)!,
+                   expectedBody: veryveryLongPacket,
+                   name: "post4")
+
+        let veryveryveryLongPacket = veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket
+
+        helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
+                   contentType: "text/plain",
+                   body: veryveryveryLongPacket.data(using: .utf8)!,
+                   expectedBody: veryveryveryLongPacket,
+                   name: "post5")
 
         sleep(1)
 
         server.finish()
+
+        sleep(1)
+
+        XCTAssertFalse(server.running)
+        XCTAssertEqual(server.connectedSocketCount, 0)
+
+        for (k, v) in calledMap {
+            print(k)
+            XCTAssertTrue(v)
+        }
     }
 
-    func helperGet(url: URL, expectedBody: String) {
+    func helperGet(url: URL, expectedBody: String, name: String) {
         let req = URLRequest(url: url)
         let session = URLSession(configuration: URLSessionConfiguration.default)
         let task = session.dataTask(with: req) {
@@ -424,11 +485,13 @@ final class swift_http_serverTests: XCTestCase {
                 return
             }
             XCTAssertEqual(expectedBody, String(data: _data, encoding: .utf8)!)
+
+            self.calledMap[name] = true
         }
         task.resume()
     }
 
-    func helperPost(url: URL, contentType: String, body: Data, expectedBody: String) {
+    func helperPost(url: URL, contentType: String, body: Data, expectedBody: String, name: String) {
         print("Data size: \(body.count)")
         let session = URLSession(configuration: URLSessionConfiguration.default)
         var req = URLRequest(url: url)
@@ -446,6 +509,8 @@ final class swift_http_serverTests: XCTestCase {
                 return
             }
             XCTAssertEqual(expectedBody, String(data: _data, encoding: .utf8)!)
+
+            self.calledMap[name] = true
         }
         task.resume()
     }

@@ -17,15 +17,27 @@ public protocol HttpServerDelegate {
 public class HttpServer {
 
     var finishing = false
+    var _running = false
+    public var running: Bool {
+        get {
+            return _running
+        }
+    }
     var listenSocket: Socket?
     var hostname: String?
     var port: Int
     var backlog: Int
     var reusePort: Bool
     var connectedSockets = [Int32: Socket]()
+    public var connectedSocketCount: Int {
+        get {
+            return connectedSockets.count
+        }
+    }
     let router = HttpServerRouter()
     var delegate: HttpServerDelegate?
-    let block = DispatchSemaphore(value: 1)
+    let lockQueue = DispatchQueue(label: "com.tjapp.swiftHttpServer.lockQueue")
+    var bufferSize = 4096
 
     public init(hostname: String? = nil, port: Int = 0, backlog: Int = 5, reusePort: Bool = true, delegate: HttpServerDelegate? = nil) {
         self.hostname = hostname
@@ -83,6 +95,63 @@ public class HttpServer {
         }
     }
 
+    /**
+     run
+     */
+    public func run() throws {
+        finishing = false
+        _running = true
+        listenSocket = try Socket.create(family: .inet, type: .stream, proto: .tcp)
+        try loop()
+        listenSocket = nil
+        _running = false
+    }
+
+    func loop() throws {
+        guard let listenSocket = listenSocket else {
+            print("HttpServer::loop() error - no listen socket")
+            return
+        }
+        try listenSocket.listen(on: port, maxBacklogSize: backlog, allowPortReuse: reusePort, node: hostname)
+        repeat {
+            do {
+                let remoteSocket = try listenSocket.acceptClientConnection()
+                onConnect(remoteSocket: remoteSocket)
+            } catch let error {
+
+                guard let socketError = error as? Socket.Error else {
+					print("HttpServer::loop() - Unexpected error...\n \(error)")
+					break
+				}
+				
+				if !self.finishing {
+					print("HttpServer::loop() error reported:\n \(socketError.description)")
+                }
+                break
+            }
+        } while finishing == false
+        listenSocket.close()
+    }
+
+    func onConnect(remoteSocket: Socket) {
+
+        lockQueue.sync { [unowned self, remoteSocket] in
+            self.connectedSockets[remoteSocket.socketfd] = remoteSocket
+        }
+        
+        delegate?.onConnect(remoteSocket: remoteSocket)
+        DispatchQueue.global(qos: .default).async {
+            [unowned self, remoteSocket] in
+            self.communicate(remoteSocket: remoteSocket)
+
+            self.delegate?.onDisconnect(remoteSocket: remoteSocket)
+            lockQueue.sync { [unowned self, remoteSocket] in
+                self.connectedSockets[remoteSocket.socketfd] = nil
+            }
+            remoteSocket.close()
+        }
+    }
+
     func communicate(remoteSocket: Socket) {
 
         readSend(remoteSocket: remoteSocket, startWithData: nil)
@@ -121,7 +190,15 @@ public class HttpServer {
             
             try sendResponse(socket: remoteSocket, response: response)
         } catch let error {
-            print("HttpServer::readSend() error: \(error)")
+
+            guard let socketError = error as? Socket.Error else {
+				print("HttpServer::readSend() - Unexpected error...\n \(error)")
+                return
+			}
+
+            if !self.finishing {
+				print("HttpServer::readSend() error reported:\n \(socketError.description)")
+            }
         }
     }
 
@@ -160,7 +237,7 @@ public class HttpServer {
     }
 
     func readHeaderString(startWithData: Data?, remoteSocket: Socket?) throws -> (String, Data?) {
-        var readBuffer = Data()
+        var readBuffer = Data(capacity: bufferSize)
         var buffer = Data()
 
         guard let remoteSocket = remoteSocket else {
@@ -188,11 +265,13 @@ public class HttpServer {
             
             let bytesRead = try remoteSocket.read(into: &readBuffer)
             
-            if bytesRead <= 0 {
+            guard bytesRead > 0 else {
                 throw HttpServerError.insufficientHeaderString
             }
             
             buffer.append(readBuffer)
+
+            readBuffer.count = 0
             
             guard let range = buffer.range(of: "\r\n\r\n".data(using: .utf8)!) else {
                 continue
@@ -218,7 +297,7 @@ public class HttpServer {
     
     func readBody(startWithData: Data?, remoteSocket: Socket, contentLength: Int) throws -> (Data?, Data?) {
         var bodyBuffer = Data()
-        var readBuffer = Data()
+        var readBuffer = Data(capacity: bufferSize)
 
         guard contentLength >= 0 else {
             throw HttpServerError.custom(string: "Content Length must not be negative value but \(contentLength)")
@@ -240,10 +319,12 @@ public class HttpServer {
             let bytesRead = try remoteSocket.read(into: &readBuffer)
 
             guard readBuffer.count == bytesRead else {
-                throw HttpServerError.custom(string: "HttpServer::readBody() error - insufficient read bytes \(bytesRead)")
+                throw HttpServerError.custom(string: "HttpServer::readBody() error - insufficient read bytes \(bytesRead) / count: \(readBuffer.count)")
             }
 
             bodyBuffer.append(readBuffer)
+
+            readBuffer.count = 0
             
             if bodyBuffer.count >= contentLength {
                 return splitDataWithPostion(data: bodyBuffer, position: contentLength)
@@ -258,47 +339,14 @@ public class HttpServer {
         return (a, b)
     }
 
-    func onConnect(remoteSocket: Socket) {
-        self.block.wait()
-        connectedSockets[remoteSocket.socketfd] = remoteSocket
-        self.block.signal()
-        
-        delegate?.onConnect(remoteSocket: remoteSocket)
-        DispatchQueue.global(qos: .default).async {
-            [unowned self, remoteSocket] in
-            self.communicate(remoteSocket: remoteSocket)
-
-            self.block.wait()
-            self.delegate?.onDisconnect(remoteSocket: remoteSocket)
-            self.connectedSockets[remoteSocket.socketfd] = nil
-            self.block.signal()
-
-            remoteSocket.close()
-        }
-    }
-
-    func loop() throws {
-        guard let listenSocket = listenSocket else {
-            print("HttpServer::loop() error - no listen socket")
-            return
-        }
-        
-        try listenSocket.listen(on: port, maxBacklogSize: backlog, allowPortReuse: reusePort, node: hostname)
-        repeat {
-            let remoteSocket = try listenSocket.acceptClientConnection()
-            onConnect(remoteSocket: remoteSocket)
-        } while finishing == false
-        listenSocket.close()
-    }
-
-    public func run() throws {
-        finishing = false
-        listenSocket = try Socket.create(family: .inet, type: .stream, proto: .tcp)
-        try loop()
-        listenSocket = nil
-    }
-
     public func finish() {
         finishing = true
+        for socket in connectedSockets.values {
+			self.lockQueue.sync { [unowned self, socket] in
+				self.connectedSockets[socket.socketfd] = nil
+				socket.close()
+			}
+		}
+        listenSocket?.close()
     }
 }
