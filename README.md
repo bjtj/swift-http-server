@@ -54,7 +54,7 @@ import SwiftHttpServer
 ```swift
 let server = HttpServer(port: 0)
 
-class GetHandler: HttpRequestHandlerDelegate {
+class GetHandler: HttpRequestHandler {
     func onHeaderCompleted(header: HttpHeader, request: HttpRequest,  response: HttpResponse) throws {
         
     }
