@@ -145,7 +145,7 @@ public class HttpServer {
             self.communicate(remoteSocket: remoteSocket)
 
             self.delegate?.onDisconnect(remoteSocket: remoteSocket)
-            lockQueue.sync { [unowned self, remoteSocket] in
+            self.lockQueue.sync { [unowned self, remoteSocket] in
                 self.connectedSockets[remoteSocket.socketfd] = nil
             }
             remoteSocket.close()

@@ -448,7 +448,10 @@ final class swift_http_serverTests: XCTestCase {
                    expectedBody: veryveryLongPacket,
                    name: "post4")
 
-        let veryveryveryLongPacket = veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket + veryveryLongPacket
+        var veryveryveryLongPacket = veryveryLongPacket
+        for _ in 0..<100 {
+            veryveryveryLongPacket.append(veryveryLongPacket)
+        }
 
         helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
                    contentType: "text/plain",
