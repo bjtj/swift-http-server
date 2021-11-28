@@ -7,8 +7,16 @@ public class HttpRequest {
     public var header: HttpHeader = HttpHeader()
     public var body: Data?
 
+    public var method: String {
+        return header.firstLine.first
+    }
+
     public var path: String {
         return header.firstLine.second
+    }
+
+    public var httpProtocol: String {
+        return header.firstLine.third
     }
 
     public init(remoteSocket: Socket?, header: HttpHeader?) {
