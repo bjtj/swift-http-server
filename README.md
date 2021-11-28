@@ -39,7 +39,7 @@ Add it to dependency (package.swift)
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/bjtj/swift-http-server.git", from: "0.1.8"),
+    .package(url: "https://github.com/bjtj/swift-http-server.git", from: "0.1.13"),
   ],
 ```
 
@@ -53,12 +53,19 @@ import SwiftHttpServer
 
 ```swift
 let server = HttpServer(port: 0)
-try server.route(pattern: "/") {
-    (request) in
-    let response = HttpResponse(code: 200, reason: HttpStatusCode.shared[200])
-    response.data = "Hello".data(using: .utf8)
-    return response
+
+class GetHandler: HttpRequestHandlerDelegate {
+    func onHeaderCompleted(header: HttpHeader, request: HttpRequest,  response: HttpResponse) throws {
+        
+    }
+    
+    func onBodyCompleted(body: Data?, request: HttpRequest, response: HttpResponse) throws {
+        response.code = 200
+        response.data = "Hello".data(using: .utf8)
+    }
 }
+
+try server.route(pattern: "/", handler: GetHandler())
 let queue = DispatchQueue.global(qos: .default)
 queue.async {
     do {
