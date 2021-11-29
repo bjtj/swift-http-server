@@ -152,7 +152,8 @@ public class HttpServer {
 
     func readSend(remoteSocket: Socket, startWithData: Data?) {
         do {
-            let (headerString, remainingData) = try readHeaderString(startWithData: startWithData, remoteSocket: remoteSocket)
+            let (headerString, remainingData) = try readHeaderString(startWithData: startWithData,
+                                                                     remoteSocket: remoteSocket)
             let header = HttpHeader.read(text: headerString)
             let request = HttpRequest(remoteSocket: remoteSocket, header: header)
 
@@ -165,23 +166,25 @@ public class HttpServer {
             
             do {
                 try handler.onHeaderCompleted(header: header, request: request, response: response)
-            } catch let err {
-                try sendResponse(socket: remoteSocket, response: errorResponse(code: 500, customBody: "Operation Failed - with: \(err)"))
-            }
-            
-            let (body, _) = try readBody(startWithData: remainingData,
-                                         remoteSocket: remoteSocket,
-                                         contentLength: header.contentLength ?? 0)
-            request.body = body
 
-            do {
+                
+                let (body, _) = try readBody(startWithData: remainingData,
+                                             remoteSocket: remoteSocket,
+                                             contentLength: header.contentLength ?? 0)
+                request.body = body
+
                 try handler.onBodyCompleted(body: body, request: request, response: response)
-            } catch let err {
-                try sendResponse(socket: remoteSocket, response: errorResponse(code: 500, customBody: "Operation Failed - with: \(err)"))
+                try sendResponse(socket: remoteSocket, response: response)
+                
+            } catch {
+                guard error is Socket.Error else {
+                    try sendResponse(socket: remoteSocket, response: errorResponse(code: 500, customBody: "Operation Failed - with:\n\(error)"))
+                    return
+                }
+                throw error
             }
             
-            try sendResponse(socket: remoteSocket, response: response)
-        } catch let error {
+        } catch {
 
             guard let socketError = error as? Socket.Error else {
 				print("HttpServer::readSend() - Unexpected error...\n \(error)")
@@ -195,31 +198,37 @@ public class HttpServer {
     }
 
     func sendResponse(socket: Socket, response: HttpResponse) throws {
-        try socket.write(from: response.header.description.data(using: .utf8)!)
-        if let data = response.data {
-            if response.header.transferEncoding == .chunked {
-                try socket.write(from: "\(data.count)\r\n".data(using: .utf8)!)
-            }
-            try socket.write(from: data)
+        
+        guard var headerData = response.header.description.data(using: .utf8) else {
+            throw HttpServerError.insufficientHeaderString
         }
-        if let stream = response.stream {
-            let bufferSize = 4096
-            let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
-            while stream.hasBytesAvailable {
-                let read = stream.read(buffer, maxLength: bufferSize)
-                if response.header.transferEncoding == .chunked {
-                    try socket.write(from: "\(read)\r\n".data(using: .utf8)!)
-                }
-                try socket.write(from: buffer, bufSize: read)
+
+        while headerData.count > 0 {
+            let bytesWrite = try socket.write(from: headerData)
+            guard bytesWrite > 0 else {
+                throw HttpServerError.custom(string: "write failed")
             }
-            buffer.deallocate()
+            headerData.removeSubrange(0..<bytesWrite)
+        }
+
+        guard var bodyData = response.data else {
+            // no body
+            return
+        }
+
+        while bodyData.count > 0 {
+            let bytesWrite = try socket.write(from: bodyData)
+            guard bytesWrite > 0 else {
+                throw HttpServerError.custom(string: "write failed")
+            }
+            bodyData.removeSubrange(0..<bytesWrite)
         }
     }
 
-    func errorResponse(code: Int, customBody: String? = nil) -> HttpResponse {
+    func errorResponse(code: Int, customBody: String? = nil, contentType: String = "text/plain") -> HttpResponse {
         let reason = HttpStatusCode.shared[code] ?? "Unknown"
         let response = HttpResponse(code: code, reason: reason)
-        response.header.contentType = "text/plain"
+        response.header.contentType = contentType
         if let body = customBody {
             response.data = body.data(using: .utf8)
         } else {

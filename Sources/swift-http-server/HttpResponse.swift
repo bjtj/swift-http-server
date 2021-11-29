@@ -21,29 +21,6 @@ public class HttpResponse {
             _data = newValue
         }
     }
-    public var _stream: InputStream?
-    public var stream: InputStream? {
-        get {
-            return _stream
-        }
-        set(newValue) {
-            _stream = newValue
-        }
-    }
-
-    public init(specVersion: HttpSpecVersion = .HTTP1_1, code: Int) {
-        header.specVersion = specVersion
-        header.firstLine.first = specVersion.rawValue
-        self.code = code
-        self.reason = HttpStatusCode.shared[code] ?? "Unknown"
-    }
-
-    public init(specVersion: HttpSpecVersion = .HTTP1_1, code: Int, reason: String?) {
-        header.specVersion = specVersion
-        header.firstLine.first = specVersion.rawValue
-        self.code = code
-        self.reason = reason ?? "Unknown"
-    }
 
     public var code: Int {
         get {
@@ -61,5 +38,33 @@ public class HttpResponse {
         set(value) {
             header.firstLine.third = value!
         }
+    }
+
+    public var contentType: String? {
+        get {
+            return header.contentType
+        }
+        set(value) {
+            header.contentType = value
+        }
+    }
+
+    public init(specVersion: HttpSpecVersion = .HTTP1_1, code: Int) {
+        header.specVersion = specVersion
+        header.firstLine.first = specVersion.rawValue
+        self.code = code
+        self.reason = HttpStatusCode.shared[code] ?? "Unknown"
+    }
+
+    public init(specVersion: HttpSpecVersion = .HTTP1_1, code: Int, reason: String?) {
+        header.specVersion = specVersion
+        header.firstLine.first = specVersion.rawValue
+        self.code = code
+        self.reason = reason ?? (HttpStatusCode.shared[code] ?? "Unknown")
+    }
+
+    public func setStatus(code: Int, reason: String? = nil) {
+        self.code = code
+        self.reason = reason ?? (HttpStatusCode.shared[code] ?? "Unknown")
     }
 }

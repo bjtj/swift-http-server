@@ -134,6 +134,7 @@ final class swift_http_serverTests: XCTestCase {
         //     XCTAssertEqual(Int32(port), address.port)
         //     server.finish()
         // }
+
     }
 
     /**
@@ -149,7 +150,7 @@ final class swift_http_serverTests: XCTestCase {
             }
             
             func onBodyCompleted(body: Data?, request: HttpRequest, response: HttpResponse) throws {
-                response.code = 200
+                response.setStatus(code: 200, reason: "GOOD")
                 response.data = "Hello".data(using: .utf8)
             }
         }
@@ -160,13 +161,24 @@ final class swift_http_serverTests: XCTestCase {
             }
             
             func onBodyCompleted(body: Data?, request: HttpRequest, response: HttpResponse) throws {
-                response.code = 200
+                response.setStatus(code: 200)
                 response.data = body
+            }
+        }
+        
+        class ErrorHandler: HttpRequestHandler {
+            func onHeaderCompleted(header: HttpHeader, request: HttpRequest, response: HttpResponse) throws {
+                
+            }
+            
+            func onBodyCompleted(body: Data?, request: HttpRequest, response: HttpResponse) throws {
+                throw HttpServerError.custom(string: "!!!!!!!!!!!!!!!!!ERROR!!!!!!!!!!!!!!!!!!!")
             }
         }
         
         try server.route(pattern: "/", handler: GetHandler())
         try server.route(pattern: "/post", handler: PostHandler())
+        try server.route(pattern: "/error", handler: ErrorHandler())
         
         let queue = DispatchQueue.global(qos: .default)
         queue.async {
@@ -191,12 +203,16 @@ final class swift_http_serverTests: XCTestCase {
                     self.calledMap["post4"] = false
                     self.calledMap["post5"] = false
 
+                    self.helperGet(url: URL(string: "http://localhost:\(address.port)/error")!,
+                                   containsBody: "!!!!!!!!!!!!!!!!!ERROR!!!!!!!!!!!!!!!!!!!",
+                                   name: "error")
+
                     self.helperGet(url: URL(string: "http://localhost:\(address.port)")!, expectedBody: "Hello",
-                              name: "get")
+                                   name: "get")
 
                     self.helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
-                               contentType: "text/plain", body: "HiHo".data(using: .utf8)!, expectedBody: "HiHo",
-                               name: "post1")
+                                    contentType: "text/plain", body: "HiHo".data(using: .utf8)!, expectedBody: "HiHo",
+                                    name: "post1")
 
 
                     let longPacket = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
@@ -475,7 +491,35 @@ final class swift_http_serverTests: XCTestCase {
                 print("error: no response data")
                 return
             }
-            XCTAssertEqual(expectedBody, String(data: _data, encoding: .utf8)!)
+            guard let body = String(data: _data, encoding: .utf8) else {
+                XCTFail("String(data: _data, encoding: .utf8) failed")
+                return
+            }
+            XCTAssertEqual(expectedBody, body)
+
+            self.calledMap[name] = true
+        }
+        task.resume()
+    }
+
+    func helperGet(url: URL, containsBody: String, name: String) {
+        let req = URLRequest(url: url)
+        let session = URLSession(configuration: URLSessionConfiguration.default)
+        let task = session.dataTask(with: req) {
+            (data, response, error) in
+            guard error == nil else {
+                print("helperGet() - error: \(error!)")
+                return
+            }
+            guard let _data = data else {
+                print("error: no response data")
+                return
+            }
+            guard let body = String(data: _data, encoding: .utf8) else {
+                XCTFail("String(data: _data, encoding: .utf8) failed")
+                return
+            }
+            XCTAssertTrue(body.contains(containsBody))
 
             self.calledMap[name] = true
         }
@@ -499,7 +543,11 @@ final class swift_http_serverTests: XCTestCase {
                 print("error: no response data")
                 return
             }
-            XCTAssertEqual(expectedBody, String(data: _data, encoding: .utf8)!)
+            guard let body = String(data: _data, encoding: .utf8) else {
+                XCTFail("String(data: _data, encoding: .utf8) failed")
+                return
+            }
+            XCTAssertEqual(expectedBody, body)
 
             self.calledMap[name] = true
         }

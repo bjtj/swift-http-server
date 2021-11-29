@@ -25,7 +25,7 @@ final class RouterTests: XCTestCase {
                 }
                 
                 func onBodyCompleted(body: Data?, request: HttpRequest, response: HttpResponse) throws {
-                    response.code = 200
+                    response.setStatus(code: 200)
                     response.data = responseBody.data(using: .utf8)
                 }
             }
