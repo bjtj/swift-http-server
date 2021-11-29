@@ -2,7 +2,9 @@
 
 This is a swift http server (library) mainly depends on IBM BlueSocket (<https://github.com/IBM-Swift/BlueSocket>).
 
+![Github Build Status](https://github.com/bjtj/swift-http-server/actions/workflows/swift.yml/badge.svg)
 [![Build Status](https://app.travis-ci.com/bjtj/swift-http-server.svg?branch=master)](https://app.travis-ci.com/bjtj/swift-http-server)
+
 
 ## Swift version
 
