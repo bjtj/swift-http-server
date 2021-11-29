@@ -70,6 +70,10 @@ final class swift_http_serverTests: XCTestCase {
         do {
 
             let server = HttpServer(port: 0)
+            server.monitor {
+                (status, error) in
+                print(" ------------- HTTP SERVER Status changed to '\(status)'")
+            }
             DispatchQueue.global(qos: .default).async {
                 do {
                     try server.run()
@@ -94,6 +98,10 @@ final class swift_http_serverTests: XCTestCase {
 
             let hostname = Network.getInetAddress()!.hostname
             let server = HttpServer(hostname: hostname, port: 0)
+            server.monitor {
+                (status, error) in
+                print(" ------------- HTTP SERVER Status changed to '\(status)'")
+            }
             DispatchQueue.global(qos: .default).async {
                 do {
                     try server.run()
@@ -143,6 +151,10 @@ final class swift_http_serverTests: XCTestCase {
     func testHttpServer() throws {
         
         let server = HttpServer(port: 0)
+        server.monitor {
+            (status, error) in
+            print(" ------------- HTTP SERVER Status changed to '\(status)'")
+        }
 
         class GetHandler: HttpRequestHandler {
             func onHeaderCompleted(header: HttpHeader, request: HttpRequest,  response: HttpResponse) throws {

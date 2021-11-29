@@ -4,6 +4,7 @@
  HttpServerError
  */
 public enum HttpServerError: Error {
+    case alreadyRunning
     case insufficientHeaderString
     case operationFailed(string: String)
     case custom(string: String)

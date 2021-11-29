@@ -2,10 +2,21 @@ import Foundation
 import Socket
 
 
+
 /**
  Http Server
  */
 public class HttpServer {
+
+    public enum Status {
+        case idle
+        case started
+        case stopped
+    }
+
+    public typealias monitorHandlerType = ((HttpServer.Status, Error?) -> Void)
+
+    var status: Status = .idle
 
     var finishing = false
     var _running = false
@@ -28,6 +39,7 @@ public class HttpServer {
     let router = HttpServerRouter()
     let lockQueue = DispatchQueue(label: "com.tjapp.swiftHttpServer.lockQueue")
     var bufferSize = 4096
+    var monitorHandler: monitorHandlerType?
 
     public init(hostname: String? = nil, port: Int = 0, backlog: Int = 5, reusePort: Bool = true) {
         self.hostname = hostname
@@ -85,17 +97,37 @@ public class HttpServer {
     }
 
     /**
+     set monitor
+     */
+    public func monitor(monitorHandler: monitorHandlerType?) -> Void {
+        self.monitorHandler = monitorHandler
+    }
+
+    /**
      run
      */
     public func run(readyHandler: ((HttpServer, Error?) -> Void)? = nil) throws {
+
+        if _running {
+            throw HttpServerError.alreadyRunning
+        }
+        
         finishing = false
         _running = true
+        status = .started
+        monitorHandler?(status, nil)
+
+        defer {
+            listenSocket = nil
+            _running = false
+            status = .stopped
+            monitorHandler?(status, nil)
+        }
+        
         listenSocket = try Socket.create(family: .inet, type: .stream, proto: .tcp)
         try prepare()
         readyHandler?(self, nil)
         loop()
-        listenSocket = nil
-        _running = false
     }
 
     func prepare() throws {
