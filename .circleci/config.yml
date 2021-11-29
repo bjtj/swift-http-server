@@ -7,7 +7,7 @@ version: 2.1
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
-  build:
+  build_linux_swift_5_5:
     # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
     # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
     docker:
@@ -19,11 +19,21 @@ jobs:
       - checkout
       - run: swift build # Install CocoaPods dependencies
       - run: swift test # Run tests using Fastlane
+  build_linux_swift_4_2:
+    docker:
+      - image: swift:4.2
+    
+    resource_class: small
 
+    steps:
+      - checkout
+      - run: swift build # Install CocoaPods dependencies
+      - run: swift test # Run tests using Fastlane
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
 workflows:
   build-test: # This is the name of the workflow, feel free to change it to better match your workflow.
     # Inside the workflow, you define the jobs you want to run.
     jobs:
-      - build
+      - build_linux_swift_4_2
+      - build_linux_swift_5_5
