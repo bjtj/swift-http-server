@@ -8,9 +8,10 @@ on:
 
 jobs:
   build:
-
-    runs-on: macos-11
-
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-11, macos-10.5]
     steps:
     - uses: actions/checkout@v2
     - name: Build
