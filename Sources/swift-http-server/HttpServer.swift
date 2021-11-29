@@ -14,10 +14,11 @@ public class HttpServer {
         case stopped
     }
 
-    public typealias monitorHandlerType = ((HttpServer.Status, Error?) -> Void)
+    public typealias monitorHandlerType = ((String?, HttpServer.Status, Error?) -> Void)
 
     var status: Status = .idle
 
+    var monitorName: String?
     var finishing = false
     var _running = false
     public var running: Bool {
@@ -99,7 +100,8 @@ public class HttpServer {
     /**
      set monitor
      */
-    public func monitor(monitorHandler: monitorHandlerType?) -> Void {
+    public func monitor(monitorName: String?, monitorHandler: monitorHandlerType?) -> Void {
+        self.monitorName = monitorName
         self.monitorHandler = monitorHandler
     }
 
@@ -115,13 +117,13 @@ public class HttpServer {
         finishing = false
         _running = true
         status = .started
-        monitorHandler?(status, nil)
+        monitorHandler?(monitorName, status, nil)
 
         defer {
             listenSocket = nil
             _running = false
             status = .stopped
-            monitorHandler?(status, nil)
+            monitorHandler?(monitorName, status, nil)
         }
         
         listenSocket = try Socket.create(family: .inet, type: .stream, proto: .tcp)

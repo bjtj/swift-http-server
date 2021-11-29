@@ -70,9 +70,9 @@ final class swift_http_serverTests: XCTestCase {
         do {
 
             let server = HttpServer(port: 0)
-            server.monitor {
-                (status, error) in
-                print(" ------------- HTTP SERVER Status changed to '\(status)'")
+            server.monitor(monitorName: "testHttpServerBind-1") {
+                (name, status, error) in
+                print(" ------------- [\(name ?? "nil")] HTTP SERVER Status changed to '\(status)'")
             }
             DispatchQueue.global(qos: .default).async {
                 do {
@@ -98,9 +98,9 @@ final class swift_http_serverTests: XCTestCase {
 
             let hostname = Network.getInetAddress()!.hostname
             let server = HttpServer(hostname: hostname, port: 0)
-            server.monitor {
-                (status, error) in
-                print(" ------------- HTTP SERVER Status changed to '\(status)'")
+            server.monitor(monitorName: "testHttpServerBind-2") {
+                (name, status, error) in
+                print(" ------------- [\(name ?? "nil")] HTTP SERVER Status changed to '\(status)'")
             }
             DispatchQueue.global(qos: .default).async {
                 do {
@@ -151,9 +151,9 @@ final class swift_http_serverTests: XCTestCase {
     func testHttpServer() throws {
         
         let server = HttpServer(port: 0)
-        server.monitor {
-            (status, error) in
-            print(" ------------- HTTP SERVER Status changed to '\(status)'")
+        server.monitor(monitorName: "testHttpServer-1") {
+            (name, status, error) in
+            print(" ------------- [\(name ?? "nil")] HTTP SERVER Status changed to '\(status)'")
         }
 
         class GetHandler: HttpRequestHandler {
@@ -475,7 +475,7 @@ final class swift_http_serverTests: XCTestCase {
             }
         }
 
-        sleep(3)
+        sleep(6)
 
         server.finish()
 
@@ -539,7 +539,7 @@ final class swift_http_serverTests: XCTestCase {
     }
 
     func helperPost(url: URL, contentType: String, body: Data, expectedBody: String, name: String) {
-        print("Data size: \(body.count)")
+        print("POST Data size: \(body.count)")
         let session = URLSession(configuration: URLSessionConfiguration.default)
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
