@@ -2,8 +2,7 @@
 
 This is a swift http server (library) mainly depends on IBM BlueSocket (<https://github.com/IBM-Swift/BlueSocket>).
 
-[![Build Status](https://app.travis-ci.com/bjtj/swift-http-server.svg?branch=master)](https://app.travis-ci.com/bjtj/swift-http-server)
-
+[![Build Status](https://app.travis-ci.com/bjtj/swift-http-server.svg?branch=master)](https://app.travis-ci.com/bjtj/swift-http-server) [![CircleCI](https://circleci.com/gh/bjtj/swift-http-server/tree/master.svg?style=svg)](https://circleci.com/gh/bjtj/swift-http-server/tree/master)
 
 ## Swift version
 
