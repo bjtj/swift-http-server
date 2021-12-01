@@ -10,6 +10,8 @@ import Socket
 final class swift_http_serverTests: XCTestCase {
 
     var calledMap = [String:Bool]()
+
+    static let lockQueue = DispatchQueue(label: "swift_http_serverTests")
     
     /**
      example
@@ -442,22 +444,22 @@ final class swift_http_serverTests: XCTestCase {
                     XCTAssertTrue(longPacket.count > 4096)
                     
                     self.helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
-                               contentType: "text/plain", body: longPacket.data(using: .utf8)!, expectedBody: longPacket,
-                               name: "post2")
+                                    contentType: "text/plain", body: longPacket.data(using: .utf8)!, expectedBody: longPacket,
+                                    name: "post2")
 
                     let veryLongPacket = longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket
 
                     self.helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
-                               contentType: "text/plain", body: veryLongPacket.data(using: .utf8)!,
-                               expectedBody: veryLongPacket,
-                               name: "post3")
+                                    contentType: "text/plain", body: veryLongPacket.data(using: .utf8)!,
+                                    expectedBody: veryLongPacket,
+                                    name: "post3")
 
                     let veryveryLongPacket = veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket
 
                     self.helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
-                               contentType: "text/plain", body: veryveryLongPacket.data(using: .utf8)!,
-                               expectedBody: veryveryLongPacket,
-                               name: "post4")
+                                    contentType: "text/plain", body: veryveryLongPacket.data(using: .utf8)!,
+                                    expectedBody: veryveryLongPacket,
+                                    name: "post4")
 
                     var veryveryveryLongPacket = veryveryLongPacket
                     for _ in 0..<100 {
@@ -465,10 +467,10 @@ final class swift_http_serverTests: XCTestCase {
                     }
 
                     self.helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
-                               contentType: "text/plain",
-                               body: veryveryveryLongPacket.data(using: .utf8)!,
-                               expectedBody: veryveryveryLongPacket,
-                               name: "post5")
+                                    contentType: "text/plain",
+                                    body: veryveryveryLongPacket.data(using: .utf8)!,
+                                    expectedBody: veryveryveryLongPacket,
+                                    name: "post5")
                 }
             } catch let error {
                 XCTFail("error occured - \(error)")
@@ -509,7 +511,10 @@ final class swift_http_serverTests: XCTestCase {
             }
             XCTAssertEqual(expectedBody, body)
 
-            self.calledMap[name] = true
+            swift_http_serverTests.lockQueue.sync {
+                [self] in
+                calledMap[name] = true
+            }
         }
         task.resume()
     }
@@ -533,7 +538,10 @@ final class swift_http_serverTests: XCTestCase {
             }
             XCTAssertTrue(body.contains(containsBody))
 
-            self.calledMap[name] = true
+            swift_http_serverTests.lockQueue.sync {
+                [self] in
+                calledMap[name] = true
+            }
         }
         task.resume()
     }
@@ -561,7 +569,10 @@ final class swift_http_serverTests: XCTestCase {
             }
             XCTAssertEqual(expectedBody, body)
 
-            self.calledMap[name] = true
+            swift_http_serverTests.lockQueue.sync {
+                [self] in 
+                calledMap[name] = true
+            }
         }
         task.resume()
     }

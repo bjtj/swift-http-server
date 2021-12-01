@@ -150,11 +150,11 @@ public class HttpServer {
                 onConnect(remoteSocket: remoteSocket)
             } catch let error {
                 guard let socketError = error as? Socket.Error else {
-					print("HttpServer::loop() - Unexpected error...\n \(error)")
-					break
-				}
-				if !self.finishing {
-					print("HttpServer::loop() error reported:\n \(socketError.description)")
+		    print("HttpServer::loop() - Unexpected error...\n \(error)")
+		    break
+		}
+		if !self.finishing {
+		    print("HttpServer::loop() error reported:\n \(socketError.description)")
                 }
                 break
             }
@@ -165,7 +165,7 @@ public class HttpServer {
     func onConnect(remoteSocket: Socket) {
 
         lockQueue.sync { [unowned self, remoteSocket] in
-            self.connectedSockets[remoteSocket.socketfd] = remoteSocket
+            connectedSockets[remoteSocket.socketfd] = remoteSocket
         }
         
         DispatchQueue.global(qos: .default).async {
@@ -221,12 +221,12 @@ public class HttpServer {
         } catch {
 
             guard let socketError = error as? Socket.Error else {
-				print("HttpServer::readSend() - Unexpected error...\n \(error)")
+		print("HttpServer::readSend() - Unexpected error...\n \(error)")
                 return
-			}
+	    }
 
             if !self.finishing {
-				print("HttpServer::readSend() error reported:\n \(socketError.description)")
+		print("HttpServer::readSend() error reported:\n \(socketError.description)")
             }
         }
     }
@@ -377,11 +377,11 @@ public class HttpServer {
     public func finish() {
         finishing = true
         for socket in connectedSockets.values {
-			self.lockQueue.sync { [unowned self, socket] in
-				self.connectedSockets[socket.socketfd] = nil
-				socket.close()
-			}
-		}
+	    self.lockQueue.sync { [unowned self, socket] in
+		connectedSockets[socket.socketfd] = nil
+		socket.close()
+	    }
+	}
         listenSocket?.close()
     }
 }
