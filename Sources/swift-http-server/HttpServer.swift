@@ -192,11 +192,11 @@ public class HttpServer {
             let request = HttpRequest(remoteSocket: remoteSocket, header: header)
 
             guard let handler = router.dispatch(path: request.path) else {
-                try sendResponse(socket: remoteSocket, response: errorResponse(code: 404))
+                try sendResponse(socket: remoteSocket, response: errorResponse(statusCode: .notFound))
                 return
             }
 
-            let response = HttpResponse(code: 404)
+            let response = HttpResponse(statusCode: .notFound)
             
             do {
                 try handler.onHeaderCompleted(header: header, request: request, response: response)
@@ -212,7 +212,7 @@ public class HttpServer {
                 
             } catch {
                 guard error is Socket.Error else {
-                    try sendResponse(socket: remoteSocket, response: errorResponse(code: 500, customBody: "Operation Failed - with:\n\(error)"))
+                    try sendResponse(socket: remoteSocket, response: errorResponse(statusCode: .internalServerError, customBody: "Operation Failed with:\n\(error)"))
                     return
                 }
                 throw error
@@ -259,14 +259,13 @@ public class HttpServer {
         }
     }
 
-    func errorResponse(code: Int, customBody: String? = nil, contentType: String = "text/plain") -> HttpResponse {
-        let reason = HttpStatusCode.shared[code] ?? "Unknown"
-        let response = HttpResponse(code: code, reason: reason)
+    func errorResponse(statusCode: HttpStatusCode, customBody: String? = nil, contentType: String = "text/plain") -> HttpResponse {
+        let response = HttpResponse(statusCode: statusCode)
         response.header.contentType = contentType
         if let body = customBody {
             response.data = body.data(using: .utf8)
         } else {
-            response.data = "Error: \(code) \(reason)".data(using: .utf8)
+            response.data = "Error: \(statusCode.description)".data(using: .utf8)
         }
         return response
     }
