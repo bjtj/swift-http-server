@@ -49,22 +49,35 @@ public class HttpResponse {
         }
     }
 
-    public init(specVersion: HttpSpecVersion = .HTTP1_1, code: Int) {
-        header.specVersion = specVersion
-        header.firstLine.first = specVersion.rawValue
-        self.code = code
-        self.reason = HttpStatusCode.shared[code] ?? "Unknown"
+    var _status: HttpStatusCode?
+     public var status: HttpStatusCode? {
+         get {
+             return _status
+        }
+
+        set(value) {
+            guard let statusCode = value else {
+                _status = nil
+                code = -1
+                reason = "Unknown"
+                return
+            }
+            _status = statusCode
+            code = statusCode.rawValue.code
+            reason = statusCode.rawValue.reason
+        }
     }
 
-    public init(specVersion: HttpSpecVersion = .HTTP1_1, code: Int, reason: String?) {
+    public init(specVersion: HttpSpecVersion = .HTTP1_1, statusCode: HttpStatusCode) {
         header.specVersion = specVersion
         header.firstLine.first = specVersion.rawValue
-        self.code = code
-        self.reason = reason ?? (HttpStatusCode.shared[code] ?? "Unknown")
+        status = statusCode
     }
 
+    @available(*, deprecated, renamed: "status")
     public func setStatus(code: Int, reason: String? = nil) {
-        self.code = code
-        self.reason = reason ?? (HttpStatusCode.shared[code] ?? "Unknown")
+        status = .custom(code, reason ?? "Unknown")
     }
+
+   
 }

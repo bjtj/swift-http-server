@@ -164,7 +164,9 @@ final class swift_http_serverTests: XCTestCase {
             }
             
             func onBodyCompleted(body: Data?, request: HttpRequest, response: HttpResponse) throws {
-                response.setStatus(code: 200, reason: "GOOD")
+                // response.setStatus(code: 200, reason: "GOOD") <-- deprecated but works for now
+                response.status = .custom(200, "GOOD")
+                response.contentType = "text/plain"
                 response.data = "Hello".data(using: .utf8)
             }
         }
@@ -175,7 +177,8 @@ final class swift_http_serverTests: XCTestCase {
             }
             
             func onBodyCompleted(body: Data?, request: HttpRequest, response: HttpResponse) throws {
-                response.setStatus(code: 200)
+                response.status = .ok
+                response.contentType = request.contentType
                 response.data = body
             }
         }
@@ -210,12 +213,16 @@ final class swift_http_serverTests: XCTestCase {
                     }
                     print("Http Server is bound to '\(address.description)'")
 
+                    self.calledMap["notfound"] = false
                     self.calledMap["get"] = false
                     self.calledMap["post1"] = false
                     self.calledMap["post2"] = false
                     self.calledMap["post3"] = false
                     self.calledMap["post4"] = false
                     self.calledMap["post5"] = false
+
+                    self.helperNotFound(url: URL(string: "http://localhost:\(address.port)/notfound")!,
+                                        name: "notfound")
 
                     self.helperGet(url: URL(string: "http://localhost:\(address.port)/error")!,
                                    containsBody: "!!!!!!!!!!!!!!!!!ERROR!!!!!!!!!!!!!!!!!!!",
@@ -444,20 +451,20 @@ final class swift_http_serverTests: XCTestCase {
                     XCTAssertTrue(longPacket.count > 4096)
                     
                     self.helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
-                                    contentType: "text/plain", body: longPacket.data(using: .utf8)!, expectedBody: longPacket,
+                                    contentType: "text/xml", body: longPacket.data(using: .utf8)!, expectedBody: longPacket,
                                     name: "post2")
 
                     let veryLongPacket = longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket
 
                     self.helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
-                                    contentType: "text/plain", body: veryLongPacket.data(using: .utf8)!,
+                                    contentType: "text/xml", body: veryLongPacket.data(using: .utf8)!,
                                     expectedBody: veryLongPacket,
                                     name: "post3")
 
                     let veryveryLongPacket = veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket
 
                     self.helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
-                                    contentType: "text/plain", body: veryveryLongPacket.data(using: .utf8)!,
+                                    contentType: "text/xml", body: veryveryLongPacket.data(using: .utf8)!,
                                     expectedBody: veryveryLongPacket,
                                     name: "post4")
 
@@ -467,7 +474,7 @@ final class swift_http_serverTests: XCTestCase {
                     }
 
                     self.helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
-                                    contentType: "text/plain",
+                                    contentType: "text/xml",
                                     body: veryveryveryLongPacket.data(using: .utf8)!,
                                     expectedBody: veryveryveryLongPacket,
                                     name: "post5")
@@ -490,6 +497,31 @@ final class swift_http_serverTests: XCTestCase {
             print(k)
             XCTAssertTrue(v)
         }
+    }
+
+    func helperNotFound(url: URL, name: String) {
+        let req = URLRequest(url: url)
+        let session = URLSession(configuration: URLSessionConfiguration.default)
+        let task = session.dataTask(with: req) {
+            (data, response, error) in
+            guard error == nil else {
+                print("helperGet() - error: \(error!)")
+                return
+            }
+
+            guard let urlresponse = response as? HTTPURLResponse else {
+                XCTFail("not http url response")
+                return
+            }
+
+            XCTAssertEqual(urlresponse.statusCode, 404)
+
+            swift_http_serverTests.lockQueue.sync {
+                [self] in
+                calledMap[name] = true
+            }
+        }
+        task.resume()
     }
 
     func helperGet(url: URL, expectedBody: String, name: String) {

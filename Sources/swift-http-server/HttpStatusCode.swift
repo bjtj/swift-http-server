@@ -1,61 +1,211 @@
 import Foundation
 
-public class HttpStatusCode {
 
-    static var shared = HttpStatusCode()
+/**
+ Http Status Code
+ */
+public enum HttpStatusCode {
 
-    var table: [Int: String] = [:]
-
-    private init() {
-        table[100] = "Continue"
-	table[101] = "Switching Protocols"
-	table[200] = "OK"
-	table[201] = "Created"
-	table[202] = "Accepted"
-	table[203] = "Non-Authoritative Information"
-	table[204] = "No Content"
-	table[205] = "Reset Content"
-	table[206] = "Partial Content"
-	table[300] = "Multiple Choices"
-	table[301] = "Moved Permanently"
-	table[302] = "Found"
-	table[303] = "See Other"
-	table[304] = "Not Modified"
-	table[305] = "Use Proxy"
-	table[306] = "(Unused)"
-	table[307] = "Temporary Redirect"
-	table[400] = "Bad Request"
-	table[401] = "Unauthorized"
-	table[402] = "Payment Required"
-	table[403] = "Forbidden"
-	table[404] = "Not Found"
-	table[405] = "Method Not Allowed"
-	table[406] = "Not Acceptable"
-	table[407] = "Proxy Authentication Required"
-	table[408] = "Request Timeout"
-	table[409] = "Conflict"
-	table[410] = "Gone"
-	table[411] = "Length Required"
-	table[412] = "Precondition Failed"
-	table[413] = "Request Entity Too Large"
-	table[414] = "Request-URI Too Long"
-	table[415] = "Unsupported Media Type"
-	table[416] = "Requested Range Not Satisfiable"
-	table[417] = "Expectation Failed"
-	table[500] = "Internal Server Error"
-	table[501] = "Not Implemented"
-	table[502] = "Bad Gateway"
-	table[503] = "Service Unavailable"
-	table[504] = "Gateway Timeout"
-	table[505] = "HTTP Version Not Supported"
-    }
+    case custom(Int, String)
+    case `continue`
+    case switchingProtocols
+    case ok
+    case created
+    case accepted
+    case nonAuthoritativeInformation 
+    case noContent
+    case resetContent
+    case partialContent
+    case multipleChoices
+    case movedPermanently
+    case found
+    case seeOther
+    case notModified
+    case useProxy
+    case unused
+    case temporaryRedirect
+    case badRequest
+    case unauthorized
+    case paymentRequired
+    case forbidden
+    case notFound
+    case methodNotAllowed
+    case notAcceptable
+    case proxyAuthenticationRequired
+    case requestTimeout
+    case conflict
+    case gone
+    case lengthRequired
+    case preconditionFailed
+    case requestEntityTooLarge
+    case requestURITooLong 
+    case unsupportedMediaType
+    case requestedRangeNotSatisfiable
+    case expectationFailed
+    case internalServerError
+    case notImplemented
+    case badGateway
+    case serviceUnavailable
+    case gatewayTimeout
+    case httpVersionNotSupported
     
-    subscript(code: Int) -> String? {
-        get {
-            return table[code]
-        }        
-        set(reason) {
-            table[code] = reason
+
+    struct Code : Equatable {
+
+        let code: Int
+        let reason: String
+
+        static func == (l: Code, r: Code) -> Bool {
+            return l.code == r.code && l.reason == r.reason
+        }
+
+        static var `continue` : Self { get { Code(code: 100, reason: "Continue") } }
+        static var switchingProtocols : Self { get { Code(code: 101, reason: "Switching Protocols") } }
+        static var ok : Self { get { Code(code: 200, reason: "OK") } }
+        static var created : Self { get { Code(code: 201, reason: "Created") } }
+        static var accepted : Self { get { Code(code: 202, reason: "Accepted") } }
+        static var nonAuthoritativeInformation  : Self { get { Code(code: 203, reason: "Non-Authoritative Information") } }
+        static var noContent : Self { get { Code(code: 204, reason: "No Content") } }
+        static var resetContent : Self { get { Code(code: 205, reason: "Reset Content") } }
+        static var partialContent : Self { get { Code(code: 206, reason: "Partial Content") } }
+        static var multipleChoices : Self { get { Code(code: 300, reason: "Multiple Choices") } }
+        static var movedPermanently : Self { get { Code(code: 301, reason: "Moved Permanently") } }
+        static var found : Self { get { Code(code: 302, reason: "Found") } }
+        static var seeOther : Self { get { Code(code: 303, reason: "See Other") } }
+        static var notModified : Self { get { Code(code: 304, reason: "Not Modified") } }
+        static var useProxy : Self { get { Code(code: 305, reason: "Use Proxy") } }
+        static var unused : Self { get { Code(code: 306, reason: "(Unused)") } }
+        static var temporaryRedirect : Self { get { Code(code: 307, reason: "Temporary Redirect") } }
+        static var badRequest : Self { get { Code(code: 400, reason: "Bad Request") } }
+        static var unauthorized : Self { get { Code(code: 401, reason: "Unauthorized") } }
+        static var paymentRequired : Self { get { Code(code: 402, reason: "Payment Required") } }
+        static var forbidden : Self { get { Code(code: 403, reason: "Forbidden") } }
+        static var notFound : Self { get { Code(code: 404, reason: "Not Found") } }
+        static var methodNotAllowed : Self { get { Code(code: 405, reason: "Method Not Allowed") } }
+        static var notAcceptable : Self { get { Code(code: 406, reason: "Not Acceptable") } }
+        static var proxyAuthenticationRequired : Self { get { Code(code: 407, reason: "Proxy Authentication Required") } }
+        static var requestTimeout : Self { get { Code(code: 408, reason: "Request Timeout") } }
+        static var conflict : Self { get { Code(code: 409, reason: "Conflict") } }
+        static var gone : Self { get { Code(code: 410, reason: "Gone") } }
+        static var lengthRequired : Self { get { Code(code: 411, reason: "Length Required") } }
+        static var preconditionFailed : Self { get { Code(code: 412, reason: "Precondition Failed") } }
+        static var requestEntityTooLarge : Self { get { Code(code: 413, reason: "Request Entity Too Large") } }
+        static var requestURITooLong  : Self { get { Code(code: 414, reason: "Request-URI Too Long") } }
+        static var unsupportedMediaType : Self { get { Code(code: 415, reason: "Unsupported Media Type") } }
+        static var requestedRangeNotSatisfiable : Self { get { Code(code: 416, reason: "Requested Range Not Satisfiable") } }
+        static var expectationFailed : Self { get { Code(code: 417, reason: "Expectation Failed") } }
+        static var internalServerError : Self { get { Code(code: 500, reason: "Internal Server Error") } }
+        static var notImplemented : Self { get { Code(code: 501, reason: "Not Implemented") } }
+        static var badGateway : Self { get { Code(code: 502, reason: "Bad Gateway") } }
+        static var serviceUnavailable : Self { get { Code(code: 503, reason: "Service Unavailable") } }
+        static var gatewayTimeout : Self { get { Code(code: 504, reason: "Gateway Timeout") } }
+        static var httpVersionNotSupported : Self { get { Code(code: 505, reason: "HTTP Version Not Supported") } }
+    }
+
+    typealias RawValue = Code
+
+    var rawValue: RawValue {
+        switch self {
+        case .custom(let code, let reason):
+            return Code(code: code, reason: reason)
+        case .`continue`: return Code.`continue`
+        case .switchingProtocols: return Code.switchingProtocols
+        case .ok: return Code.ok
+        case .created: return Code.created
+        case .accepted: return Code.accepted
+        case .nonAuthoritativeInformation : return Code.nonAuthoritativeInformation 
+        case .noContent: return Code.noContent
+        case .resetContent: return Code.resetContent
+        case .partialContent: return Code.partialContent
+        case .multipleChoices: return Code.multipleChoices
+        case .movedPermanently: return Code.movedPermanently
+        case .found: return Code.found
+        case .seeOther: return Code.seeOther
+        case .notModified: return Code.notModified
+        case .useProxy: return Code.useProxy
+        case .unused: return Code.unused
+        case .temporaryRedirect: return Code.temporaryRedirect
+        case .badRequest: return Code.badRequest
+        case .unauthorized: return Code.unauthorized
+        case .paymentRequired: return Code.paymentRequired
+        case .forbidden: return Code.forbidden
+        case .notFound: return Code.notFound
+        case .methodNotAllowed: return Code.methodNotAllowed
+        case .notAcceptable: return Code.notAcceptable
+        case .proxyAuthenticationRequired: return Code.proxyAuthenticationRequired
+        case .requestTimeout: return Code.requestTimeout
+        case .conflict: return Code.conflict
+        case .gone: return Code.gone
+        case .lengthRequired: return Code.lengthRequired
+        case .preconditionFailed: return Code.preconditionFailed
+        case .requestEntityTooLarge: return Code.requestEntityTooLarge
+        case .requestURITooLong : return Code.requestURITooLong 
+        case .unsupportedMediaType: return Code.unsupportedMediaType
+        case .requestedRangeNotSatisfiable: return Code.requestedRangeNotSatisfiable
+        case .expectationFailed: return Code.expectationFailed
+        case .internalServerError: return Code.internalServerError
+        case .notImplemented: return Code.notImplemented
+        case .badGateway: return Code.badGateway
+        case .serviceUnavailable: return Code.serviceUnavailable
+        case .gatewayTimeout: return Code.gatewayTimeout
+        case .httpVersionNotSupported: return Code.httpVersionNotSupported
         }
     }
+
+    init?(code: Int, reason: String) {
+        self = .custom(code, reason)
+    }
+
+    init?(rawValue: Int) {
+        switch rawValue {
+        case 100: self = .`continue`
+        case 101: self = .switchingProtocols
+        case 200: self = .ok
+        case 201: self = .created
+        case 202: self = .accepted
+        case 203: self = .nonAuthoritativeInformation 
+        case 204: self = .noContent
+        case 205: self = .resetContent
+        case 206: self = .partialContent
+        case 300: self = .multipleChoices
+        case 301: self = .movedPermanently
+        case 302: self = .found
+        case 303: self = .seeOther
+        case 304: self = .notModified
+        case 305: self = .useProxy
+        case 306: self = .unused
+        case 307: self = .temporaryRedirect
+        case 400: self = .badRequest
+        case 401: self = .unauthorized
+        case 402: self = .paymentRequired
+        case 403: self = .forbidden
+        case 404: self = .notFound
+        case 405: self = .methodNotAllowed
+        case 406: self = .notAcceptable
+        case 407: self = .proxyAuthenticationRequired
+        case 408: self = .requestTimeout
+        case 409: self = .conflict
+        case 410: self = .gone
+        case 411: self = .lengthRequired
+        case 412: self = .preconditionFailed
+        case 413: self = .requestEntityTooLarge
+        case 414: self = .requestURITooLong 
+        case 415: self = .unsupportedMediaType
+        case 416: self = .requestedRangeNotSatisfiable
+        case 417: self = .expectationFailed
+        case 500: self = .internalServerError
+        case 501: self = .notImplemented
+        case 502: self = .badGateway
+        case 503: self = .serviceUnavailable
+        case 504: self = .gatewayTimeout
+        case 505: self = .httpVersionNotSupported
+        default:
+            return nil
+        }
+    }
+
+    var description: String {
+        return "\(rawValue.code) \(rawValue.reason)"
+    }
+
 }

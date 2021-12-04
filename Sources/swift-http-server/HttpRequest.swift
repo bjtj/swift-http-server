@@ -19,6 +19,24 @@ public class HttpRequest {
         return header.firstLine.third
     }
 
+    public var contentType: String? {
+        get {
+            return header.contentType
+        }
+        set(value) {
+            header.contentType = value
+        }
+    }
+
+    public var contentLength: Int? {
+        get {
+            return header.contentLength
+        }
+        set(value) {
+            header.contentLength = value
+        }
+    }
+
     public init(remoteSocket: Socket?, header: HttpHeader?) {
         self.remoteSocket = remoteSocket
         self.header = header!
