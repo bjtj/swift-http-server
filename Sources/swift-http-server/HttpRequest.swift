@@ -15,8 +15,8 @@ public class HttpRequest {
         return header.firstLine.second
     }
 
-    public var httpProtocol: String {
-        return header.firstLine.third
+    public var `protocol`: HttpSpecVersion? {
+        return HttpSpecVersion(rawValue: header.firstLine.third)
     }
 
     public var contentType: String? {

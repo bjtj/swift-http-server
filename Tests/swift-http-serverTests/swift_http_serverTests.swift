@@ -9,9 +9,9 @@ import Socket
 
 final class swift_http_serverTests: XCTestCase {
 
-    var calledMap = [String:Bool]()
-
+    var calledMap = [String:Int]()
     static let lockQueue = DispatchQueue(label: "swift_http_serverTests")
+    static let closeConnection = false
     
     /**
      example
@@ -213,13 +213,16 @@ final class swift_http_serverTests: XCTestCase {
                     }
                     print("Http Server is bound to '\(address.description)'")
 
-                    self.calledMap["notfound"] = false
-                    self.calledMap["get"] = false
-                    self.calledMap["post1"] = false
-                    self.calledMap["post2"] = false
-                    self.calledMap["post3"] = false
-                    self.calledMap["post4"] = false
-                    self.calledMap["post5"] = false
+                    self.calledMap["notfound"] = 0
+                    self.calledMap["get"] = 0
+                    self.calledMap["error"] = 0
+                    self.calledMap["post1"] = 0
+                    self.calledMap["post2"] = 0
+                    self.calledMap["post3"] = 0
+                    self.calledMap["post4"] = 0
+                    self.calledMap["post5"] = 0
+
+                    print("self.calledMap.count --- \(self.calledMap.count)")
 
                     self.helperNotFound(url: URL(string: "http://localhost:\(address.port)/notfound")!,
                                         name: "notfound")
@@ -484,7 +487,7 @@ final class swift_http_serverTests: XCTestCase {
             }
         }
 
-        sleep(6)
+        sleep(10)
 
         server.finish()
 
@@ -494,18 +497,20 @@ final class swift_http_serverTests: XCTestCase {
         XCTAssertEqual(server.connectedSocketCount, 0)
 
         for (k, v) in calledMap {
-            print(k)
-            XCTAssertTrue(v)
+            print("\(k) called? \(v > 0) (\(v))")
+            XCTAssertTrue(v > 0)
         }
     }
 
     func helperNotFound(url: URL, name: String) {
-        let req = URLRequest(url: url)
+        var req = URLRequest(url: url)
+        req.addValue(name, forHTTPHeaderField: "x-name")
+        req.addValue("close", forHTTPHeaderField: "Connection")
         let session = URLSession(configuration: URLSessionConfiguration.default)
         let task = session.dataTask(with: req) {
             (data, response, error) in
             guard error == nil else {
-                print("helperGet() - error: \(error!)")
+                print("helperNotFound() - error: \(error!)")
                 return
             }
 
@@ -518,14 +523,16 @@ final class swift_http_serverTests: XCTestCase {
 
             swift_http_serverTests.lockQueue.sync {
                 [self] in
-                calledMap[name] = true
+                calledMap[name] = calledMap[name]! + 1
             }
         }
         task.resume()
     }
 
     func helperGet(url: URL, expectedBody: String, name: String) {
-        let req = URLRequest(url: url)
+        var req = URLRequest(url: url)
+        req.addValue(name, forHTTPHeaderField: "x-name")
+        req.addValue("close", forHTTPHeaderField: "Connection")
         let session = URLSession(configuration: URLSessionConfiguration.default)
         let task = session.dataTask(with: req) {
             (data, response, error) in
@@ -545,14 +552,16 @@ final class swift_http_serverTests: XCTestCase {
 
             swift_http_serverTests.lockQueue.sync {
                 [self] in
-                calledMap[name] = true
+                calledMap[name] = calledMap[name]! + 1
             }
         }
         task.resume()
     }
 
     func helperGet(url: URL, containsBody: String, name: String) {
-        let req = URLRequest(url: url)
+        var req = URLRequest(url: url)
+        req.addValue(name, forHTTPHeaderField: "x-name")
+        req.addValue("close", forHTTPHeaderField: "Connection")
         let session = URLSession(configuration: URLSessionConfiguration.default)
         let task = session.dataTask(with: req) {
             (data, response, error) in
@@ -572,7 +581,7 @@ final class swift_http_serverTests: XCTestCase {
 
             swift_http_serverTests.lockQueue.sync {
                 [self] in
-                calledMap[name] = true
+                calledMap[name] = calledMap[name]! + 1
             }
         }
         task.resume()
@@ -584,6 +593,8 @@ final class swift_http_serverTests: XCTestCase {
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.httpBody = body
+        req.addValue(name, forHTTPHeaderField: "x-name")
+        req.addValue("close", forHTTPHeaderField: "Connection")
         req.addValue(contentType, forHTTPHeaderField: "Content-Type")
         let task = session.dataTask(with: req) {
             (data, response, error) in
@@ -603,7 +614,7 @@ final class swift_http_serverTests: XCTestCase {
 
             swift_http_serverTests.lockQueue.sync {
                 [self] in 
-                calledMap[name] = true
+                calledMap[name] = calledMap[name]! + 1
             }
         }
         task.resume()

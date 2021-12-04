@@ -1,10 +1,13 @@
+//
+// HttpServer.swift
+// 
+
 import Foundation
 import Socket
 
 
-
 /**
- Http Server
+ Http Server Implementation
  */
 public class HttpServer {
 
@@ -164,15 +167,15 @@ public class HttpServer {
 
     func onConnect(remoteSocket: Socket) {
 
-        lockQueue.sync { [unowned self, remoteSocket] in
+        lockQueue.sync { [self, remoteSocket] in
             connectedSockets[remoteSocket.socketfd] = remoteSocket
         }
         
         DispatchQueue.global(qos: .default).async {
-            [unowned self, remoteSocket] in
+            [self, remoteSocket] in
             self.communicate(remoteSocket: remoteSocket)
 
-            self.lockQueue.sync { [unowned self, remoteSocket] in
+            self.lockQueue.sync { [self, remoteSocket] in
                 self.connectedSockets[remoteSocket.socketfd] = nil
             }
             remoteSocket.close()
@@ -180,20 +183,23 @@ public class HttpServer {
     }
 
     func communicate(remoteSocket: Socket) {
-
-        readSend(remoteSocket: remoteSocket, startWithData: nil)
+        var needKeepDoing = true
+        var remainingData: Data? = nil
+        repeat {
+            (needKeepDoing, remainingData) = readSend(remoteSocket: remoteSocket, startWithData: remainingData)
+        } while needKeepDoing
     }
 
-    func readSend(remoteSocket: Socket, startWithData: Data?) {
+    func readSend(remoteSocket: Socket, startWithData: Data?) -> (Bool, Data?) {
         do {
-            let (headerString, remainingData) = try readHeaderString(startWithData: startWithData,
-                                                                     remoteSocket: remoteSocket)
+            let (headerString, remainingDataFromHeaderRead) = try readHeaderString(startWithData: startWithData,
+                                                                                   remoteSocket: remoteSocket)
             let header = HttpHeader.read(text: headerString)
             let request = HttpRequest(remoteSocket: remoteSocket, header: header)
 
             guard let handler = router.dispatch(path: request.path) else {
                 try sendResponse(socket: remoteSocket, response: errorResponse(statusCode: .notFound))
-                return
+                return (false, nil)
             }
 
             let response = HttpResponse(statusCode: .notFound)
@@ -201,19 +207,21 @@ public class HttpServer {
             do {
                 try handler.onHeaderCompleted(header: header, request: request, response: response)
 
-                
-                let (body, _) = try readBody(startWithData: remainingData,
-                                             remoteSocket: remoteSocket,
-                                             contentLength: header.contentLength ?? 0)
+                let (body, remainingDataFromBodyRead) = try readBody(startWithData: remainingDataFromHeaderRead,
+                                                                     remoteSocket: remoteSocket,
+                                                                     contentLength: header.contentLength ?? 0)
                 request.body = body
-
+                response.header["Connection"] = request.header["Connection"]
+                
                 try handler.onBodyCompleted(body: body, request: request, response: response)
                 try sendResponse(socket: remoteSocket, response: response)
+
+                return (checkKeepAlive(request: request, response: response), remainingDataFromBodyRead)
                 
             } catch {
                 guard error is Socket.Error else {
                     try sendResponse(socket: remoteSocket, response: errorResponse(statusCode: .internalServerError, customBody: "Operation Failed with:\n\(error)"))
-                    return
+                    return (false, nil)
                 }
                 throw error
             }
@@ -222,17 +230,25 @@ public class HttpServer {
 
             guard let socketError = error as? Socket.Error else {
 		        print("HttpServer::readSend() - Unexpected error...\n \(error)")
-                return
+                return (false, nil)
 	        }
 
             if !self.finishing {
 		        print("HttpServer::readSend() error reported:\n \(socketError.description)")
             }
+
+            return (false, nil)
         }
     }
 
+    func checkKeepAlive(request: HttpRequest, response: HttpResponse) -> Bool {
+        return
+          request.`protocol` == .http1_1 &&
+          "close".caseInsensitiveCompare(request.header["Connection"] ?? "") != .orderedSame &&
+          "close".caseInsensitiveCompare(response.header["Connection"] ?? "") != .orderedSame
+    }
+
     func sendResponse(socket: Socket, response: HttpResponse) throws {
-        
         guard var headerData = response.header.description.data(using: .utf8) else {
             throw HttpServerError.insufficientHeaderString
         }
@@ -240,7 +256,10 @@ public class HttpServer {
         while headerData.count > 0 {
             let bytesWrite = try socket.write(from: headerData)
             guard bytesWrite > 0 else {
-                throw HttpServerError.custom(string: "write failed")
+                if bytesWrite == 0 {
+                    throw HttpServerError.socketClosed
+                }
+                throw HttpServerError.socketFailed(string: "socket write failed: \(bytesWrite)")
             }
             headerData.removeSubrange(0..<bytesWrite)
         }
@@ -300,7 +319,10 @@ public class HttpServer {
             let bytesRead = try remoteSocket.read(into: &readBuffer)
             
             guard bytesRead > 0 else {
-                throw HttpServerError.insufficientHeaderString
+                if bytesRead == 0 {
+                    throw HttpServerError.socketClosed
+                }
+                throw HttpServerError.socketFailed(string: "socket read failed: \(bytesRead)")
             }
             
             buffer.append(readBuffer)
@@ -376,7 +398,7 @@ public class HttpServer {
     public func finish() {
         finishing = true
         for socket in connectedSockets.values {
-	        self.lockQueue.sync { [unowned self, socket] in
+	        self.lockQueue.sync { [self, socket] in
 		        connectedSockets[socket.socketfd] = nil
 		        socket.close()
 	        }
