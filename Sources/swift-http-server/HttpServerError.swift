@@ -4,6 +4,8 @@
  HttpServerError
  */
 public enum HttpServerError: Error {
+    case socketClosed
+    case socketFailed(string: String)
     case alreadyRunning
     case insufficientHeaderString
     case operationFailed(string: String)

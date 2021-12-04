@@ -68,7 +68,7 @@ public class HttpResponse {
         }
     }
 
-    public init(specVersion: HttpSpecVersion = .HTTP1_1, statusCode: HttpStatusCode) {
+    public init(specVersion: HttpSpecVersion = .http1_1, statusCode: HttpStatusCode) {
         header.specVersion = specVersion
         header.firstLine.first = specVersion.rawValue
         status = statusCode
