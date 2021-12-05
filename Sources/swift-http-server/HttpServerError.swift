@@ -13,4 +13,5 @@ public enum HttpServerError: Error {
     case operationFailed(string: String)
     case custom(string: String)
     case illegalArgument(string: String)
+    case unknownProtocolVersion(string: String)
 }

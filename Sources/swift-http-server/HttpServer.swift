@@ -197,7 +197,7 @@ public class HttpServer {
             // 1. Read Header
             let (headerString, remainingDataFromHeaderRead) = try readHeaderString(startWithData: startWithData, remoteSocket: remoteSocket)
             let header = try HttpHeader.read(text: headerString)
-            let request = HttpRequest(remoteSocket: remoteSocket, header: header)
+            let request = try HttpRequest(remoteSocket: remoteSocket, header: header)
 
             // Get Request Handler
             guard let handler = router.dispatch(path: request.path) else {
