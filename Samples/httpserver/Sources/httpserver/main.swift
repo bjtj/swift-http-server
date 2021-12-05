@@ -87,7 +87,7 @@ func main() throws {
         }
 
         func onBodyData(data: Data?, request: HttpRequest, response: HttpResponse) throws {
-            guard let data = data else {
+            guard let _ = data else {
                 throw HttpServerError.custom(string: "no data")
             }
         }
