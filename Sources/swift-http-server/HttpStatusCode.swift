@@ -59,47 +59,47 @@ public enum HttpStatusCode {
             return l.code == r.code && l.reason == r.reason
         }
 
-        static var `continue` : Self { get { Code(code: 100, reason: "Continue") } }
-        static var switchingProtocols : Self { get { Code(code: 101, reason: "Switching Protocols") } }
-        static var ok : Self { get { Code(code: 200, reason: "OK") } }
-        static var created : Self { get { Code(code: 201, reason: "Created") } }
-        static var accepted : Self { get { Code(code: 202, reason: "Accepted") } }
-        static var nonAuthoritativeInformation  : Self { get { Code(code: 203, reason: "Non-Authoritative Information") } }
-        static var noContent : Self { get { Code(code: 204, reason: "No Content") } }
-        static var resetContent : Self { get { Code(code: 205, reason: "Reset Content") } }
-        static var partialContent : Self { get { Code(code: 206, reason: "Partial Content") } }
-        static var multipleChoices : Self { get { Code(code: 300, reason: "Multiple Choices") } }
-        static var movedPermanently : Self { get { Code(code: 301, reason: "Moved Permanently") } }
-        static var found : Self { get { Code(code: 302, reason: "Found") } }
-        static var seeOther : Self { get { Code(code: 303, reason: "See Other") } }
-        static var notModified : Self { get { Code(code: 304, reason: "Not Modified") } }
-        static var useProxy : Self { get { Code(code: 305, reason: "Use Proxy") } }
-        static var unused : Self { get { Code(code: 306, reason: "(Unused)") } }
-        static var temporaryRedirect : Self { get { Code(code: 307, reason: "Temporary Redirect") } }
-        static var badRequest : Self { get { Code(code: 400, reason: "Bad Request") } }
-        static var unauthorized : Self { get { Code(code: 401, reason: "Unauthorized") } }
-        static var paymentRequired : Self { get { Code(code: 402, reason: "Payment Required") } }
-        static var forbidden : Self { get { Code(code: 403, reason: "Forbidden") } }
-        static var notFound : Self { get { Code(code: 404, reason: "Not Found") } }
-        static var methodNotAllowed : Self { get { Code(code: 405, reason: "Method Not Allowed") } }
-        static var notAcceptable : Self { get { Code(code: 406, reason: "Not Acceptable") } }
-        static var proxyAuthenticationRequired : Self { get { Code(code: 407, reason: "Proxy Authentication Required") } }
-        static var requestTimeout : Self { get { Code(code: 408, reason: "Request Timeout") } }
-        static var conflict : Self { get { Code(code: 409, reason: "Conflict") } }
-        static var gone : Self { get { Code(code: 410, reason: "Gone") } }
-        static var lengthRequired : Self { get { Code(code: 411, reason: "Length Required") } }
-        static var preconditionFailed : Self { get { Code(code: 412, reason: "Precondition Failed") } }
-        static var requestEntityTooLarge : Self { get { Code(code: 413, reason: "Request Entity Too Large") } }
-        static var requestURITooLong  : Self { get { Code(code: 414, reason: "Request-URI Too Long") } }
-        static var unsupportedMediaType : Self { get { Code(code: 415, reason: "Unsupported Media Type") } }
-        static var requestedRangeNotSatisfiable : Self { get { Code(code: 416, reason: "Requested Range Not Satisfiable") } }
-        static var expectationFailed : Self { get { Code(code: 417, reason: "Expectation Failed") } }
-        static var internalServerError : Self { get { Code(code: 500, reason: "Internal Server Error") } }
-        static var notImplemented : Self { get { Code(code: 501, reason: "Not Implemented") } }
-        static var badGateway : Self { get { Code(code: 502, reason: "Bad Gateway") } }
-        static var serviceUnavailable : Self { get { Code(code: 503, reason: "Service Unavailable") } }
-        static var gatewayTimeout : Self { get { Code(code: 504, reason: "Gateway Timeout") } }
-        static var httpVersionNotSupported : Self { get { Code(code: 505, reason: "HTTP Version Not Supported") } }
+        static var `continue` : HttpStatusCode.Code { return Code(code: 100, reason: "Continue") }
+        static var switchingProtocols : HttpStatusCode.Code { return Code(code: 101, reason: "Switching Protocols") }
+        static var ok : HttpStatusCode.Code { return Code(code: 200, reason: "OK") }
+        static var created : HttpStatusCode.Code { return Code(code: 201, reason: "Created") }
+        static var accepted : HttpStatusCode.Code { return Code(code: 202, reason: "Accepted") }
+        static var nonAuthoritativeInformation  : HttpStatusCode.Code { return Code(code: 203, reason: "Non-Authoritative Information") }
+        static var noContent : HttpStatusCode.Code { return Code(code: 204, reason: "No Content") }
+        static var resetContent : HttpStatusCode.Code { return Code(code: 205, reason: "Reset Content") }
+        static var partialContent : HttpStatusCode.Code { return Code(code: 206, reason: "Partial Content") }
+        static var multipleChoices : HttpStatusCode.Code { return Code(code: 300, reason: "Multiple Choices") }
+        static var movedPermanently : HttpStatusCode.Code { return Code(code: 301, reason: "Moved Permanently") }
+        static var found : HttpStatusCode.Code { return Code(code: 302, reason: "Found") }
+        static var seeOther : HttpStatusCode.Code { return Code(code: 303, reason: "See Other") }
+        static var notModified : HttpStatusCode.Code { return Code(code: 304, reason: "Not Modified") }
+        static var useProxy : HttpStatusCode.Code { return Code(code: 305, reason: "Use Proxy") }
+        static var unused : HttpStatusCode.Code { return Code(code: 306, reason: "(Unused)") }
+        static var temporaryRedirect : HttpStatusCode.Code { return Code(code: 307, reason: "Temporary Redirect") }
+        static var badRequest : HttpStatusCode.Code { return Code(code: 400, reason: "Bad Request") }
+        static var unauthorized : HttpStatusCode.Code { return Code(code: 401, reason: "Unauthorized") }
+        static var paymentRequired : HttpStatusCode.Code { return Code(code: 402, reason: "Payment Required") }
+        static var forbidden : HttpStatusCode.Code { return Code(code: 403, reason: "Forbidden") }
+        static var notFound : HttpStatusCode.Code { return Code(code: 404, reason: "Not Found") }
+        static var methodNotAllowed : HttpStatusCode.Code { return Code(code: 405, reason: "Method Not Allowed") }
+        static var notAcceptable : HttpStatusCode.Code { return Code(code: 406, reason: "Not Acceptable") }
+        static var proxyAuthenticationRequired : HttpStatusCode.Code { return Code(code: 407, reason: "Proxy Authentication Required") }
+        static var requestTimeout : HttpStatusCode.Code { return Code(code: 408, reason: "Request Timeout") }
+        static var conflict : HttpStatusCode.Code { return Code(code: 409, reason: "Conflict") }
+        static var gone : HttpStatusCode.Code { return Code(code: 410, reason: "Gone") }
+        static var lengthRequired : HttpStatusCode.Code { return Code(code: 411, reason: "Length Required") }
+        static var preconditionFailed : HttpStatusCode.Code { return Code(code: 412, reason: "Precondition Failed") }
+        static var requestEntityTooLarge : HttpStatusCode.Code { return Code(code: 413, reason: "Request Entity Too Large") }
+        static var requestURITooLong  : HttpStatusCode.Code { return Code(code: 414, reason: "Request-URI Too Long") }
+        static var unsupportedMediaType : HttpStatusCode.Code { return Code(code: 415, reason: "Unsupported Media Type") }
+        static var requestedRangeNotSatisfiable : HttpStatusCode.Code { return Code(code: 416, reason: "Requested Range Not Satisfiable") }
+        static var expectationFailed : HttpStatusCode.Code { return Code(code: 417, reason: "Expectation Failed") }
+        static var internalServerError : HttpStatusCode.Code { return Code(code: 500, reason: "Internal Server Error") }
+        static var notImplemented : HttpStatusCode.Code { return Code(code: 501, reason: "Not Implemented") }
+        static var badGateway : HttpStatusCode.Code { return Code(code: 502, reason: "Bad Gateway") }
+        static var serviceUnavailable : HttpStatusCode.Code { return Code(code: 503, reason: "Service Unavailable") }
+        static var gatewayTimeout : HttpStatusCode.Code { return Code(code: 504, reason: "Gateway Timeout") }
+        static var httpVersionNotSupported : HttpStatusCode.Code { return Code(code: 505, reason: "HTTP Version Not Supported") }
     }
 
     typealias RawValue = Code

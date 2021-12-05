@@ -25,9 +25,12 @@ public class FirstLine {
         return parts.joined(separator: " ")
     }
 
-    public static func read(text: String) -> FirstLine {
+    public static func read(text: String) throws -> FirstLine {
         let firstLine = FirstLine()
         let tokens = text.split(separator: " ", maxSplits: 2)
+        guard tokens.count == 3 else {
+            throw HttpServerError.custom(string: "wrong firstline format `\(text)`")
+        }
         firstLine.first = String(tokens[0])
         firstLine.second = String(tokens[1])
         firstLine.third = String(tokens[2])

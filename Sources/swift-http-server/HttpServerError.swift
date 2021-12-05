@@ -1,4 +1,6 @@
-
+//
+// HttpServerError.swift
+// 
 
 /**
  HttpServerError

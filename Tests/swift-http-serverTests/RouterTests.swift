@@ -20,6 +20,8 @@ final class RouterTests: XCTestCase {
                 init(responseBody: String) {
                     self.responseBody = responseBody
                 }
+
+                var dumpBody: Bool = true
                 
                 func onHeaderCompleted(header: HttpHeader, request: HttpRequest,  response: HttpResponse) throws {
                 }

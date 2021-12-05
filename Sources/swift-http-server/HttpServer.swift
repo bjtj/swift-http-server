@@ -168,7 +168,7 @@ public class HttpServer {
     func onConnect(remoteSocket: Socket) {
 
         lockQueue.sync { [self, remoteSocket] in
-            connectedSockets[remoteSocket.socketfd] = remoteSocket
+            self.connectedSockets[remoteSocket.socketfd] = remoteSocket
         }
         
         DispatchQueue.global(qos: .default).async {
@@ -182,6 +182,7 @@ public class HttpServer {
         }
     }
 
+    // Communiate
     func communicate(remoteSocket: Socket) {
         var needKeepDoing = true
         var remainingData: Data? = nil
@@ -190,54 +191,84 @@ public class HttpServer {
         } while needKeepDoing
     }
 
+    // Read request and send response
     func readSend(remoteSocket: Socket, startWithData: Data?) -> (Bool, Data?) {
         do {
-            let (headerString, remainingDataFromHeaderRead) = try readHeaderString(startWithData: startWithData,
-                                                                                   remoteSocket: remoteSocket)
-            let header = HttpHeader.read(text: headerString)
+            // 1. Read Header
+            let (headerString, remainingDataFromHeaderRead) = try readHeaderString(startWithData: startWithData, remoteSocket: remoteSocket)
+            let header = try HttpHeader.read(text: headerString)
             let request = HttpRequest(remoteSocket: remoteSocket, header: header)
 
+            // Get Request Handler
             guard let handler = router.dispatch(path: request.path) else {
                 try sendResponse(socket: remoteSocket, response: errorResponse(statusCode: .notFound))
                 return (false, nil)
             }
 
+            if handler.dumpBody {
+                request.body = Data()
+            }
+            
             let response = HttpResponse(statusCode: .notFound)
             
             do {
+                // Handle Header Completed
                 try handler.onHeaderCompleted(header: header, request: request, response: response)
 
-                let (body, remainingDataFromBodyRead) = try readBody(startWithData: remainingDataFromHeaderRead,
-                                                                     remoteSocket: remoteSocket,
-                                                                     contentLength: header.contentLength ?? 0)
-                request.body = body
+                // Get Transfer Handler
+                guard let transfer = try getTransfer(remoteSocket: remoteSocket, request: request, startWithData: remainingDataFromHeaderRead) else {
+                    try sendResponse(socket: remoteSocket, response: errorResponse(statusCode: .badRequest, customBody: "Invalid Transfer Encoding \(request.header["Transfer-Encoding"] ?? "nil")"))
+                    return (false, nil)
+                }
+
+                // 2. Read Body
+                while finishing == false && transfer.status != .completed {
+                    guard let data = try transfer.read() else {
+                        break
+                    }
+                    try handler.onBodyData(data: data, request: request, response: response)
+                    request.body?.append(data)
+                }
+
+                // Body Completed
                 response.header["Connection"] = request.header["Connection"]
-                
-                try handler.onBodyCompleted(body: body, request: request, response: response)
+                try handler.onBodyCompleted(body: request.body, request: request, response: response)
+
+                // 3. Send Response
                 try sendResponse(socket: remoteSocket, response: response)
 
+                // Check Continuous Handling
+                let remainingDataFromBodyRead = transfer.remainingData
                 return (checkKeepAlive(request: request, response: response), remainingDataFromBodyRead)
                 
             } catch {
+                // Operation Failed
                 guard error is Socket.Error else {
                     try sendResponse(socket: remoteSocket, response: errorResponse(statusCode: .internalServerError, customBody: "Operation Failed with:\n\(error)"))
                     return (false, nil)
                 }
                 throw error
             }
-            
         } catch {
-
             guard let socketError = error as? Socket.Error else {
-		        print("HttpServer::readSend() - Unexpected error...\n \(error)")
+                print("HttpServer::readSend() - Unexpected error...\n \(error)")
                 return (false, nil)
-	        }
-
-            if !self.finishing {
-		        print("HttpServer::readSend() error reported:\n \(socketError.description)")
             }
-
+            if !finishing {
+                print("HttpServer::readSend() error reported:\n \(socketError.description)")
+            }
             return (false, nil)
+        }
+    }
+
+    func getTransfer(remoteSocket: Socket, request: HttpRequest, startWithData: Data?) throws -> Transfer? {
+        switch request.header.transferEncoding {
+        case let val where val == .chunked:
+            return try ChunkedTransfer(remoteSocket: remoteSocket, startWithData: startWithData)            
+        default:
+            // TODO: tolerable content length is ok?
+            let contentLength = request.contentLength ?? 0
+            return try FixedTransfer(remoteSocket: remoteSocket, contentLength: contentLength, startWithData: startWithData)
         }
     }
 
@@ -272,7 +303,7 @@ public class HttpServer {
         while bodyData.count > 0 {
             let bytesWrite = try socket.write(from: bodyData)
             guard bytesWrite > 0 else {
-                throw HttpServerError.custom(string: "write failed")
+                throw HttpServerError.socketFailed(string: "socket write failed: \(bytesWrite)")
             }
             bodyData.removeSubrange(0..<bytesWrite)
         }
@@ -311,7 +342,7 @@ public class HttpServer {
             return (String(data: header, encoding: .utf8)!, remainingData)
         }
         
-        while self.finishing == false {
+        while finishing == false {
             if try remoteSocket.isReadableOrWritable(timeout: 1_000).0 == false {
                 continue
             }
@@ -350,56 +381,12 @@ public class HttpServer {
         let b = data.subdata(in: range.upperBound..<data.endIndex)
         return (a, b)
     }
-    
-    func readBody(startWithData: Data?, remoteSocket: Socket, contentLength: Int) throws -> (Data?, Data?) {
-        var bodyBuffer = Data()
-        var readBuffer = Data(capacity: bufferSize)
-
-        guard contentLength >= 0 else {
-            throw HttpServerError.custom(string: "Content Length must not be negative value but \(contentLength)")
-        }
-
-        if contentLength == 0 {
-            return (nil, nil)
-        }
-
-        if let startWithData = startWithData {
-            bodyBuffer.append(startWithData)
-        }
-
-        if bodyBuffer.count >= contentLength {
-            return splitDataWithPostion(data: bodyBuffer, position: contentLength)
-        }
-
-        while bodyBuffer.count < contentLength && finishing == false {
-            let bytesRead = try remoteSocket.read(into: &readBuffer)
-
-            guard readBuffer.count == bytesRead else {
-                throw HttpServerError.custom(string: "HttpServer::readBody() error - insufficient read bytes \(bytesRead) / count: \(readBuffer.count)")
-            }
-
-            bodyBuffer.append(readBuffer)
-
-            readBuffer.count = 0
-            
-            if bodyBuffer.count >= contentLength {
-                return splitDataWithPostion(data: bodyBuffer, position: contentLength)
-            }
-        }
-        throw HttpServerError.custom(string: "HttpServer::readBody() failed")
-    }
-
-    func splitDataWithPostion(data: Data, position: Int) -> (Data?, Data?) {
-        let a = data.subdata(in: 0..<position)
-        let b = data.subdata(in: position..<data.endIndex)
-        return (a, b)
-    }
 
     public func finish() {
         finishing = true
         for socket in connectedSockets.values {
 	        self.lockQueue.sync { [self, socket] in
-		        connectedSockets[socket.socketfd] = nil
+		        self.connectedSockets[socket.socketfd] = nil
 		        socket.close()
 	        }
 	    }

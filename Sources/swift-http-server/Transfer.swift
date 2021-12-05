@@ -1,11 +1,14 @@
-import Socket
+//
+// Transfer.swift
+//
+
+import Foundation
 
 /**
- Transfer
+ Transfer protocol
  */
-public class Transfer {
-    public var remoteSocket: Socket?
-    public init(remoteSocket: Socket?) {
-        self.remoteSocket = remoteSocket
-    }
+public protocol Transfer {
+    var status: TransferStatus { get }
+    var remainingData: Data? { get }
+    func read() throws -> Data?
 }
