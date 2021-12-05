@@ -9,7 +9,25 @@ import Socket
 
 
 func main() throws {
-    let server = HttpServer(port: 9999)
+
+    var bindHostname:String? = nil
+    var bindPort:Int = 9999
+    if CommandLine.arguments.count == 3 {
+        bindHostname = CommandLine.arguments[1]
+        guard let port = Int(CommandLine.arguments[2]) else {
+            print("Error - not port number format '\(CommandLine.arguments[2])'")
+            return
+        }
+        bindPort = port
+    } else if CommandLine.arguments.count == 2 {
+        guard let port = Int(CommandLine.arguments[1]) else {
+            print("Error - not port number format '\(CommandLine.arguments[1])'")
+            return
+        }
+        bindPort = port
+    }
+    
+    let server = HttpServer(hostname: bindHostname, port: bindPort)
 
     server.monitor(monitorName: "sample-http-server") {
         (name, status, error) in
@@ -17,6 +35,9 @@ func main() throws {
     }
 
     class GetHandler: HttpRequestHandler {
+        
+        var dumpBody: Bool = true
+        
         func onHeaderCompleted(header: HttpHeader, request: HttpRequest,  response: HttpResponse) throws {
             
         }
@@ -30,8 +51,10 @@ func main() throws {
     }
 
     class PostHandler: HttpRequestHandler {
+
+        var dumpBody: Bool = true
+        
         func onHeaderCompleted(header: HttpHeader, request: HttpRequest, response: HttpResponse) throws {
-            
         }
         
         func onBodyCompleted(body: Data?, request: HttpRequest, response: HttpResponse) throws {
@@ -42,18 +65,44 @@ func main() throws {
     }
     
     class ErrorHandler: HttpRequestHandler {
+
+        var dumpBody: Bool = true
+        
         func onHeaderCompleted(header: HttpHeader, request: HttpRequest, response: HttpResponse) throws {
-            
         }
         
         func onBodyCompleted(body: Data?, request: HttpRequest, response: HttpResponse) throws {
             throw HttpServerError.custom(string: "!!!!!!!!!!!!!!!!!ERROR!!!!!!!!!!!!!!!!!!!")
         }
     }
+
+    class ChunkedHandler: HttpRequestHandler {
+
+        var dumpBody: Bool = true
+        
+        func onHeaderCompleted(header: HttpHeader, request: HttpRequest, response: HttpResponse) throws {
+            guard header.transferEncoding == .chunked else {
+                throw HttpServerError.custom(string: "not chunked transfer")
+            }
+        }
+
+        func onBodyData(data: Data?, request: HttpRequest, response: HttpResponse) throws {
+            guard let data = data else {
+                throw HttpServerError.custom(string: "no data")
+            }
+        }
+        
+        func onBodyCompleted(body: Data?, request: HttpRequest, response: HttpResponse) throws {
+            response.status = .ok
+            response.contentType = request.contentType
+            response.data = body
+        }
+    }
     
     try server.route(pattern: "/", handler: GetHandler())
     try server.route(pattern: "/post", handler: PostHandler())
     try server.route(pattern: "/error", handler: ErrorHandler())
+    try server.route(pattern: "/chunked", handler: ChunkedHandler())
 
     DispatchQueue.global(qos: .default).async {
         do {

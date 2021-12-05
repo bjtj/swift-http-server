@@ -23,41 +23,7 @@ final class swift_http_serverTests: XCTestCase {
         XCTAssertEqual(swift_http_server().text, "Hello, World!")
     }
 
-    /**
-     http header test
-     */
-    func testHttpHeader() {
-        let text = "GET / HTTP/1.1\r\nLocation: http://example.com\r\nExt: \r\n\r\n"
-        let header = HttpHeader.read(text: text)
-        XCTAssertEqual(header.description, text)
-    }
-
-    /**
-     http header reader test
-     */
-    func testHttpHeaderReader() {
-        let text = "GET / HTTP/1.1\r\nLocation: http://example.com\r\nExt: \r\n\r\n"
-
-        var str = text[..<text.index(text.startIndex, offsetBy: 20)]
-
-        if str.hasSuffix("\r\n\r\n") {
-            let header = HttpHeader.read(text: text)
-            XCTAssertEqual(header.description, text)
-        }
-
-        str += text[text.index(text.startIndex, offsetBy: 20)...]
-        
-        if str.hasSuffix("\r\n\r\n") {
-            let header = HttpHeader.read(text: text)
-            XCTAssertEqual(header.description, text)
-        } else {
-            XCTAssert(false)
-        }
-    }
-
-    /**
-     http server bind test
-     */
+    // TEST -- http server bind test
     func testHttpServerBind() -> Void {
         
         let addresses = Network.getInetAddresses()
@@ -121,7 +87,8 @@ final class swift_http_serverTests: XCTestCase {
             server.finish()
         }
 
-        // -----------------------
+        // -----------------------------
+        // Specific Hostname & Port Bind
 
         // do {
         //     let hostname = Network.getInetAddress()!.hostname
@@ -147,9 +114,7 @@ final class swift_http_serverTests: XCTestCase {
 
     }
 
-    /**
-     http server test
-     */
+    // TEST -- http server test
     func testHttpServer() throws {
         
         let server = HttpServer(port: 0)
@@ -158,11 +123,13 @@ final class swift_http_serverTests: XCTestCase {
             print(" ------------- [\(name ?? "nil")] HTTP SERVER Status changed to '\(status)'")
         }
 
+        // `Get` handler
         class GetHandler: HttpRequestHandler {
+            var dumpBody: Bool = true
+
             func onHeaderCompleted(header: HttpHeader, request: HttpRequest,  response: HttpResponse) throws {
                 
             }
-            
             func onBodyCompleted(body: Data?, request: HttpRequest, response: HttpResponse) throws {
                 // response.setStatus(code: 200, reason: "GOOD") <-- deprecated but works for now
                 response.status = .custom(200, "GOOD")
@@ -171,31 +138,68 @@ final class swift_http_serverTests: XCTestCase {
             }
         }
 
+        // `Post` Handler
         class PostHandler: HttpRequestHandler {
+            
+            var dumpBody: Bool = true
+            
             func onHeaderCompleted(header: HttpHeader, request: HttpRequest, response: HttpResponse) throws {
                 
             }
-            
             func onBodyCompleted(body: Data?, request: HttpRequest, response: HttpResponse) throws {
                 response.status = .ok
                 response.contentType = request.contentType
                 response.data = body
             }
         }
-        
+
+        // `Error` Handler
         class ErrorHandler: HttpRequestHandler {
+            
+            var dumpBody: Bool = true
+            
             func onHeaderCompleted(header: HttpHeader, request: HttpRequest, response: HttpResponse) throws {
-                
+            }
+            func onBodyCompleted(body: Data?, request: HttpRequest, response: HttpResponse) throws {
+                throw HttpServerError.custom(string: "!!!!!!!!!!!!!!!!!ERROR!!!!!!!!!!!!!!!!!!!")
+            }
+        }
+
+        // `Chunked Transfer` Handler
+        class ChunkedHandler: HttpRequestHandler {
+            
+            var dumpBody: Bool = true
+            
+            func onHeaderCompleted(header: HttpHeader, request: HttpRequest, response: HttpResponse) throws {
+                guard request.header.transferEncoding == .chunked else {
+                    throw HttpServerError.custom(string: "NOT CHUNKED TRANSFER !!")
+                }
+                request.body = Data()
+            }
+
+            func onBodyData(data: Data?, request: HttpRequest, response: HttpResponse) throws {
+                guard let data = data else {
+                    throw HttpServerError.custom(string: "NO DATA ON BODY DATA !!")
+                }
+
+                guard let string = String(data: data, encoding: .utf8) else {
+                    XCTFail("Failed data string")
+                    return
+                }
+                print("DATA -- '\(string)'")
             }
             
             func onBodyCompleted(body: Data?, request: HttpRequest, response: HttpResponse) throws {
-                throw HttpServerError.custom(string: "!!!!!!!!!!!!!!!!!ERROR!!!!!!!!!!!!!!!!!!!")
+                response.status = .ok
+                response.contentType = "plain/text"
+                response.data = body
             }
         }
         
         try server.route(pattern: "/", handler: GetHandler())
         try server.route(pattern: "/post", handler: PostHandler())
         try server.route(pattern: "/error", handler: ErrorHandler())
+        try server.route(pattern: "/chunked", handler: ChunkedHandler())
         
         let queue = DispatchQueue.global(qos: .default)
         queue.async {
@@ -221,266 +225,98 @@ final class swift_http_serverTests: XCTestCase {
                     self.calledMap["post3"] = 0
                     self.calledMap["post4"] = 0
                     self.calledMap["post5"] = 0
+                    self.calledMap["chunked"] = 0
 
                     print("self.calledMap.count --- \(self.calledMap.count)")
 
+                    // -*- not found -*-
+
                     self.helperNotFound(url: URL(string: "http://localhost:\(address.port)/notfound")!,
                                         name: "notfound")
+
+                    // -*- get -*-
 
                     self.helperGet(url: URL(string: "http://localhost:\(address.port)/error")!,
                                    containsBody: "!!!!!!!!!!!!!!!!!ERROR!!!!!!!!!!!!!!!!!!!",
                                    name: "error")
 
-                    self.helperGet(url: URL(string: "http://localhost:\(address.port)")!, expectedBody: "Hello",
+                    // -*- get -*-
+
+                    self.helperGet(url: URL(string: "http://localhost:\(address.port)")!,
+                                   expectedBody: "Hello",
                                    name: "get")
 
+                    // -*- post -*-
+
                     self.helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
-                                    contentType: "text/plain", body: "HiHo".data(using: .utf8)!, expectedBody: "HiHo",
+                                    contentType: "text/plain",
+                                    body: "HiHo".data(using: .utf8)!,
+                                    expectedBody: "HiHo",
                                     name: "post1")
 
+                    // -*- post long -*-
 
-                    let longPacket = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-                      "<CATALOG>" +
-                      "  <CD>" +
-                      "    <TITLE>Empire Burlesque</TITLE>" +
-                      "    <ARTIST>Bob Dylan</ARTIST>" +
-                      "    <COUNTRY>USA</COUNTRY>" +
-                      "    <COMPANY>Columbia</COMPANY>" +
-                      "    <PRICE>10.90</PRICE>" +
-                      "    <YEAR>1985</YEAR>" +
-                      "  </CD>" +
-                      "  <CD>" +
-                      "    <TITLE>Hide your heart</TITLE>" +
-                      "    <ARTIST>Bonnie Tyler</ARTIST>" +
-                      "    <COUNTRY>UK</COUNTRY>" +
-                      "    <COMPANY>CBS Records</COMPANY>" +
-                      "    <PRICE>9.90</PRICE>" +
-                      "    <YEAR>1988</YEAR>" +
-                      "  </CD>" +
-                      "  <CD>" +
-                      "    <TITLE>Greatest Hits</TITLE>" +
-                      "    <ARTIST>Dolly Parton</ARTIST>" +
-                      "    <COUNTRY>USA</COUNTRY>" +
-                      "    <COMPANY>RCA</COMPANY>" +
-                      "    <PRICE>9.90</PRICE>" +
-                      "    <YEAR>1982</YEAR>" +
-                      "  </CD>" +
-                      "  <CD>" +
-                      "    <TITLE>Still got the blues</TITLE>" +
-                      "    <ARTIST>Gary Moore</ARTIST>" +
-                      "    <COUNTRY>UK</COUNTRY>" +
-                      "    <COMPANY>Virgin records</COMPANY>" +
-                      "    <PRICE>10.20</PRICE>" +
-                      "    <YEAR>1990</YEAR>" +
-                      "  </CD>" +
-                      "  <CD>" +
-                      "    <TITLE>Eros</TITLE>" +
-                      "    <ARTIST>Eros Ramazzotti</ARTIST>" +
-                      "    <COUNTRY>EU</COUNTRY>" +
-                      "    <COMPANY>BMG</COMPANY>" +
-                      "    <PRICE>9.90</PRICE>" +
-                      "    <YEAR>1997</YEAR>" +
-                      "  </CD>" +
-                      "  <CD>" +
-                      "    <TITLE>One night only</TITLE>" +
-                      "    <ARTIST>Bee Gees</ARTIST>" +
-                      "    <COUNTRY>UK</COUNTRY>" +
-                      "    <COMPANY>Polydor</COMPANY>" +
-                      "    <PRICE>10.90</PRICE>" +
-                      "    <YEAR>1998</YEAR>" +
-                      "  </CD>" +
-                      "  <CD>" +
-                      "    <TITLE>Sylvias Mother</TITLE>" +
-                      "    <ARTIST>Dr.Hook</ARTIST>" +
-                      "    <COUNTRY>UK</COUNTRY>" +
-                      "    <COMPANY>CBS</COMPANY>" +
-                      "    <PRICE>8.10</PRICE>" +
-                      "    <YEAR>1973</YEAR>" +
-                      "  </CD>" +
-                      "  <CD>" +
-                      "    <TITLE>Maggie May</TITLE>" +
-                      "    <ARTIST>Rod Stewart</ARTIST>" +
-                      "    <COUNTRY>UK</COUNTRY>" +
-                      "    <COMPANY>Pickwick</COMPANY>" +
-                      "    <PRICE>8.50</PRICE>" +
-                      "    <YEAR>1990</YEAR>" +
-                      "  </CD>" +
-                      "  <CD>" +
-                      "    <TITLE>Romanza</TITLE>" +
-                      "    <ARTIST>Andrea Bocelli</ARTIST>" +
-                      "    <COUNTRY>EU</COUNTRY>" +
-                      "    <COMPANY>Polydor</COMPANY>" +
-                      "    <PRICE>10.80</PRICE>" +
-                      "    <YEAR>1996</YEAR>" +
-                      "  </CD>" +
-                      "  <CD>" +
-                      "    <TITLE>When a man loves a woman</TITLE>" +
-                      "    <ARTIST>Percy Sledge</ARTIST>" +
-                      "    <COUNTRY>USA</COUNTRY>" +
-                      "    <COMPANY>Atlantic</COMPANY>" +
-                      "    <PRICE>8.70</PRICE>" +
-                      "    <YEAR>1987</YEAR>" +
-                      "  </CD>" +
-                      "  <CD>" +
-                      "    <TITLE>Black angel</TITLE>" +
-                      "    <ARTIST>Savage Rose</ARTIST>" +
-                      "    <COUNTRY>EU</COUNTRY>" +
-                      "    <COMPANY>Mega</COMPANY>" +
-                      "    <PRICE>10.90</PRICE>" +
-                      "    <YEAR>1995</YEAR>" +
-                      "  </CD>" +
-                      "  <CD>" +
-                      "    <TITLE>1999 Grammy Nominees</TITLE>" +
-                      "    <ARTIST>Many</ARTIST>" +
-                      "    <COUNTRY>USA</COUNTRY>" +
-                      "    <COMPANY>Grammy</COMPANY>" +
-                      "    <PRICE>10.20</PRICE>" +
-                      "    <YEAR>1999</YEAR>" +
-                      "  </CD>" +
-                      "  <CD>" +
-                      "    <TITLE>For the good times</TITLE>" +
-                      "    <ARTIST>Kenny Rogers</ARTIST>" +
-                      "    <COUNTRY>UK</COUNTRY>" +
-                      "    <COMPANY>Mucik Master</COMPANY>" +
-                      "    <PRICE>8.70</PRICE>" +
-                      "    <YEAR>1995</YEAR>" +
-                      "  </CD>" +
-                      "  <CD>" +
-                      "    <TITLE>Big Willie style</TITLE>" +
-                      "    <ARTIST>Will Smith</ARTIST>" +
-                      "    <COUNTRY>USA</COUNTRY>" +
-                      "    <COMPANY>Columbia</COMPANY>" +
-                      "    <PRICE>9.90</PRICE>" +
-                      "    <YEAR>1997</YEAR>" +
-                      "  </CD>" +
-                      "  <CD>" +
-                      "    <TITLE>Tupelo Honey</TITLE>" +
-                      "    <ARTIST>Van Morrison</ARTIST>" +
-                      "    <COUNTRY>UK</COUNTRY>" +
-                      "    <COMPANY>Polydor</COMPANY>" +
-                      "    <PRICE>8.20</PRICE>" +
-                      "    <YEAR>1971</YEAR>" +
-                      "  </CD>" +
-                      "  <CD>" +
-                      "    <TITLE>Soulsville</TITLE>" +
-                      "    <ARTIST>Jorn Hoel</ARTIST>" +
-                      "    <COUNTRY>Norway</COUNTRY>" +
-                      "    <COMPANY>WEA</COMPANY>" +
-                      "    <PRICE>7.90</PRICE>" +
-                      "    <YEAR>1996</YEAR>" +
-                      "  </CD>" +
-                      "  <CD>" +
-                      "    <TITLE>The very best of</TITLE>" +
-                      "    <ARTIST>Cat Stevens</ARTIST>" +
-                      "    <COUNTRY>UK</COUNTRY>" +
-                      "    <COMPANY>Island</COMPANY>" +
-                      "    <PRICE>8.90</PRICE>" +
-                      "    <YEAR>1990</YEAR>" +
-                      "  </CD>" +
-                      "  <CD>" +
-                      "    <TITLE>Stop</TITLE>" +
-                      "    <ARTIST>Sam Brown</ARTIST>" +
-                      "    <COUNTRY>UK</COUNTRY>" +
-                      "    <COMPANY>A and M</COMPANY>" +
-                      "    <PRICE>8.90</PRICE>" +
-                      "    <YEAR>1988</YEAR>" +
-                      "  </CD>" +
-                      "  <CD>" +
-                      "    <TITLE>Bridge of Spies</TITLE>" +
-                      "    <ARTIST>T'Pau</ARTIST>" +
-                      "    <COUNTRY>UK</COUNTRY>" +
-                      "    <COMPANY>Siren</COMPANY>" +
-                      "    <PRICE>7.90</PRICE>" +
-                      "    <YEAR>1987</YEAR>" +
-                      "  </CD>" +
-                      "  <CD>" +
-                      "    <TITLE>Private Dancer</TITLE>" +
-                      "    <ARTIST>Tina Turner</ARTIST>" +
-                      "    <COUNTRY>UK</COUNTRY>" +
-                      "    <COMPANY>Capitol</COMPANY>" +
-                      "    <PRICE>8.90</PRICE>" +
-                      "    <YEAR>1983</YEAR>" +
-                      "  </CD>" +
-                      "  <CD>" +
-                      "    <TITLE>Midt om natten</TITLE>" +
-                      "    <ARTIST>Kim Larsen</ARTIST>" +
-                      "    <COUNTRY>EU</COUNTRY>" +
-                      "    <COMPANY>Medley</COMPANY>" +
-                      "    <PRICE>7.80</PRICE>" +
-                      "    <YEAR>1983</YEAR>" +
-                      "  </CD>" +
-                      "  <CD>" +
-                      "    <TITLE>Pavarotti Gala Concert</TITLE>" +
-                      "    <ARTIST>Luciano Pavarotti</ARTIST>" +
-                      "    <COUNTRY>UK</COUNTRY>" +
-                      "    <COMPANY>DECCA</COMPANY>" +
-                      "    <PRICE>9.90</PRICE>" +
-                      "    <YEAR>1991</YEAR>" +
-                      "  </CD>" +
-                      "  <CD>" +
-                      "    <TITLE>The dock of the bay</TITLE>" +
-                      "    <ARTIST>Otis Redding</ARTIST>" +
-                      "    <COUNTRY>USA</COUNTRY>" +
-                      "    <COMPANY>Stax Records</COMPANY>" +
-                      "    <PRICE>7.90</PRICE>" +
-                      "    <YEAR>1968</YEAR>" +
-                      "  </CD>" +
-                      "  <CD>" +
-                      "    <TITLE>Picture book</TITLE>" +
-                      "    <ARTIST>Simply Red</ARTIST>" +
-                      "    <COUNTRY>EU</COUNTRY>" +
-                      "    <COMPANY>Elektra</COMPANY>" +
-                      "    <PRICE>7.20</PRICE>" +
-                      "    <YEAR>1985</YEAR>" +
-                      "  </CD>" +
-                      "  <CD>" +
-                      "    <TITLE>Red</TITLE>" +
-                      "    <ARTIST>The Communards</ARTIST>" +
-                      "    <COUNTRY>UK</COUNTRY>" +
-                      "    <COMPANY>London</COMPANY>" +
-                      "    <PRICE>7.80</PRICE>" +
-                      "    <YEAR>1987</YEAR>" +
-                      "  </CD>" +
-                      "  <CD>" +
-                      "    <TITLE>Unchain my heart</TITLE>" +
-                      "    <ARTIST>Joe Cocker</ARTIST>" +
-                      "    <COUNTRY>USA</COUNTRY>" +
-                      "    <COMPANY>EMI</COMPANY>" +
-                      "    <PRICE>8.20</PRICE>" +
-                      "    <YEAR>1987</YEAR>" +
-                      "  </CD>" +
-                      "</CATALOG>"
+                    let longPacket = self.xmlSamplePacket
 
                     XCTAssertTrue(longPacket.count > 4096)
                     
                     self.helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
-                                    contentType: "text/xml", body: longPacket.data(using: .utf8)!, expectedBody: longPacket,
+                                    contentType: "text/xml",
+                                    body: longPacket.data(using: .utf8)!,
+                                    expectedBody: longPacket,
                                     name: "post2")
 
-                    let veryLongPacket = longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket + longPacket
+                    // -*- post very long -*-
+                    
+                    let veryLongPacket = self.utilMultiplyString(string: longPacket, count: 11)
 
                     self.helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
-                                    contentType: "text/xml", body: veryLongPacket.data(using: .utf8)!,
+                                    contentType: "text/xml",
+                                    body: veryLongPacket.data(using: .utf8)!,
                                     expectedBody: veryLongPacket,
                                     name: "post3")
 
-                    let veryveryLongPacket = veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket + veryLongPacket
+                    // -*- post very very long -*-
+                    
+                    let veryveryLongPacket = self.utilMultiplyString(string: veryLongPacket, count: 8)
 
                     self.helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
-                                    contentType: "text/xml", body: veryveryLongPacket.data(using: .utf8)!,
+                                    contentType: "text/xml",
+                                    body: veryveryLongPacket.data(using: .utf8)!,
                                     expectedBody: veryveryLongPacket,
                                     name: "post4")
 
-                    var veryveryveryLongPacket = veryveryLongPacket
-                    for _ in 0..<100 {
-                        veryveryveryLongPacket.append(veryveryLongPacket)
-                    }
+                    // -*- post very very very long -*-
+                    
+                    let veryveryveryLongPacket = self.utilMultiplyString(string: veryveryLongPacket, count: 101)
+
+                    XCTAssertEqual(veryveryveryLongPacket.count, 41373640)
 
                     self.helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
                                     contentType: "text/xml",
                                     body: veryveryveryLongPacket.data(using: .utf8)!,
                                     expectedBody: veryveryveryLongPacket,
                                     name: "post5")
+
+                    // -*- chunked -*-
+
+                    self.helperChunked(url: URL(string: "http://localhost:\(address.port)/chunked")!,
+                                       dataArray: ["hello1".data(using: .utf8)!,
+                                                   "hello12".data(using: .utf8)!,
+                                                   "hello123".data(using: .utf8)!,
+                                                   "hello1234".data(using: .utf8)!,
+                                                   "hello12345".data(using: .utf8)!,
+                                                   "hello123456".data(using: .utf8)!,
+                                                   "hello1234567".data(using: .utf8)!,
+                                                   "hello12345678".data(using: .utf8)!,
+                                                   "hello123456789".data(using: .utf8)!,
+                                                   "hello1234567890".data(using: .utf8)!,
+                                                   "hello12345678901".data(using: .utf8)!,
+                                                   "hello123456789012".data(using: .utf8)!,
+                                                   "hello1234567890123".data(using: .utf8)!,
+                                                   "hello12345678901234".data(using: .utf8)!,
+                                                   "hello123456789012345".data(using: .utf8)!,],
+                                       name: "chunked")
                 }
             } catch let error {
                 XCTFail("error occured - \(error)")
@@ -502,6 +338,16 @@ final class swift_http_serverTests: XCTestCase {
         }
     }
 
+    // UTIL -- Multiply String
+    func utilMultiplyString(string: String, count: Int) -> String {
+        var ret = ""
+        for _ in 0..<count {
+            ret += string
+        }
+        return ret
+    }
+
+    // HELPER -- NOT FOUND
     func helperNotFound(url: URL, name: String) {
         var req = URLRequest(url: url)
         req.addValue(name, forHTTPHeaderField: "x-name")
@@ -523,12 +369,13 @@ final class swift_http_serverTests: XCTestCase {
 
             swift_http_serverTests.lockQueue.sync {
                 [self] in
-                calledMap[name] = calledMap[name]! + 1
+                self.calledMap[name] = self.calledMap[name]! + 1
             }
         }
         task.resume()
     }
 
+    // HELPER -- GET
     func helperGet(url: URL, expectedBody: String, name: String) {
         var req = URLRequest(url: url)
         req.addValue(name, forHTTPHeaderField: "x-name")
@@ -552,12 +399,13 @@ final class swift_http_serverTests: XCTestCase {
 
             swift_http_serverTests.lockQueue.sync {
                 [self] in
-                calledMap[name] = calledMap[name]! + 1
+                self.calledMap[name] = self.calledMap[name]! + 1
             }
         }
         task.resume()
     }
 
+    // HELPER -- GET
     func helperGet(url: URL, containsBody: String, name: String) {
         var req = URLRequest(url: url)
         req.addValue(name, forHTTPHeaderField: "x-name")
@@ -581,14 +429,14 @@ final class swift_http_serverTests: XCTestCase {
 
             swift_http_serverTests.lockQueue.sync {
                 [self] in
-                calledMap[name] = calledMap[name]! + 1
+                self.calledMap[name] = self.calledMap[name]! + 1
             }
         }
         task.resume()
     }
 
+    // HELPER -- POST
     func helperPost(url: URL, contentType: String, body: Data, expectedBody: String, name: String) {
-        print("POST Data size: \(body.count)")
         let session = URLSession(configuration: URLSessionConfiguration.default)
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
@@ -610,44 +458,117 @@ final class swift_http_serverTests: XCTestCase {
                 XCTFail("String(data: _data, encoding: .utf8) failed")
                 return
             }
+            guard expectedBody.count == body.count else {
+                XCTFail("failed (expectedBody.count \(expectedBody.count) == body.count \(body.count))")
+                return
+            }
             XCTAssertEqual(expectedBody, body)
 
             swift_http_serverTests.lockQueue.sync {
                 [self] in 
-                calledMap[name] = calledMap[name]! + 1
+                self.calledMap[name] = self.calledMap[name]! + 1
             }
         }
         task.resume()
     }
 
-    func testChunkedTransfer() {
+
+    // HELPER -- CHUNKED TRANSFER
+    func helperChunked(url: URL, dataArray: [Data], name: String) {
+        // TODO:
+
+        // https://developer.apple.com/documentation/foundation/inputstream
+        class MyInputStream : InputStream {
+
+            var idx = 0
+            var dataArray: [Data]
+
+            override var hasBytesAvailable: Bool {
+                return idx < dataArray.count
+            }
+
+            init(dataArray: [Data]) {
+                self.dataArray = dataArray
+                super.init(data: Data(capacity: 4096))
+            }
+
+            override func read(_ buffer: UnsafeMutablePointer<UInt8>, maxLength len: Int) -> Int {
+                guard idx < dataArray.count else {
+                    return 0
+                }
+                let data = dataArray[idx]
+                let count = min(data.count, len)
+                data.copyBytes(to: buffer, count: count)
+                idx += 1
+
+                usleep(500 * 1000)
+                
+                return count
+            }
+
+            override func getBuffer(_ buffer: UnsafeMutablePointer<UnsafeMutablePointer<UInt8>?>, length len: UnsafeMutablePointer<Int>) -> Bool {
+                return false
+            }
+        }
+
+        let len = dataArray.reduce(0, { $0 + $1.count })
+
+        let session = URLSession(configuration: URLSessionConfiguration.default)
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.httpBodyStream = MyInputStream(dataArray: dataArray)
+        req.addValue(name, forHTTPHeaderField: "x-name")
+        req.addValue("close", forHTTPHeaderField: "Connection")
+        // req.addValue(contentType, forHTTPHeaderField: "Content-Type")
+        let task = session.dataTask(with: req) {
+            (data, response, error) in
+            guard error == nil else {
+                print("helperChunked() - error: \(error!)")
+                return
+            }
+            guard let data = data else {
+                print("error: no response data")
+                return
+            }
+            guard let body = String(data: data, encoding: .utf8) else {
+                XCTFail("String(data: _data, encoding: .utf8) failed")
+                return
+            }
+
+            XCTAssertEqual(len, body.count)
+
+            swift_http_serverTests.lockQueue.sync {
+                [self] in 
+                self.calledMap[name] = self.calledMap[name]! + 1
+            }
+        }
+        task.resume()
+    }
+
+    // TEST chunked tranfser
+    func testChunkedTransfer() throws {
         // fixed size
         // chunked
 
-        let inputStream = InputStream(data: "5\r\nhello6\r\n world0\r\n".data(using: .utf8)!)
-        let transfer = ChunkedTransfer(inputStream: inputStream)
+        let data = "5\r\nhello\r\n6\r\n world\r\n0\r\n\r\n".data(using: .utf8)
+        guard let transfer = try ChunkedTransfer(remoteSocket: try Socket.create(), startWithData: data) else {
+            XCTFail("failed initialize chunked tranfser")
+            return
+        }
 
-        inputStream.open()
-
-        XCTAssertEqual(try transfer.readChunkSize(), 5)
-        XCTAssertEqual(try transfer.readChunkData(chunkSize: 5), "hello".data(using: .utf8))
-        // XCTAssertEqual(try transfer.readChunkSize(), 6)
-        // XCTAssertEqual(try transfer.readChunkData(chunkSize: 6), " world".data(using: .utf8))
-        // XCTAssertEqual(try transfer.readChunkSize(), 0)
-
-        let bufferSize = 10
-        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
-        XCTAssertEqual(transfer.read(buffer, maxLength: bufferSize), 6)
-        XCTAssertEqual(String(cString: buffer), " world")
-
-        XCTAssertEqual(transfer.read(buffer, maxLength: bufferSize), 0)
+        XCTAssertEqual(try transfer.readSize(), 5)
+        XCTAssertEqual(try transfer.readContent(size: 5), "hello".data(using: .utf8))
+        XCTAssertEqual(try transfer.readSize(), 6)
+        XCTAssertEqual(try transfer.readContent(size: 6), " world".data(using: .utf8))
+        XCTAssertEqual(try transfer.readSize(), 0)
+        XCTAssertNil(try transfer.readContent(size: 0))
     }
 
-    func testKeepConnect() {
+    func testKeepConnect() throws {
 
         let header = HttpHeader()
 
-        header.firstLine = FirstLine.read(text: "HTTP/1.0 200 OK")
+        header.firstLine = try FirstLine.read(text: "HTTP/1.0 200 OK")
 
         XCTAssertEqual(header.connectionType, nil)
         XCTAssertEqual(false, requiredKeepConnect(specVersion: header.firstLine.first, header: header))
@@ -660,7 +581,7 @@ final class swift_http_serverTests: XCTestCase {
         XCTAssertEqual(header.connectionType, .keep_alive)
         XCTAssertEqual(true, requiredKeepConnect(specVersion: header.firstLine.first, header: header))
 
-        header.firstLine = FirstLine.read(text: "HTTP/1.1 200 OK")
+        header.firstLine = try FirstLine.read(text: "HTTP/1.1 200 OK")
         header["Connection"] = nil
         XCTAssertEqual(true, requiredKeepConnect(specVersion: header.firstLine.first, header: header))
 
@@ -678,11 +599,221 @@ final class swift_http_serverTests: XCTestCase {
 
     static var allTests = [
       ("testExample", testExample),
-      ("testHttpHeader", testHttpHeader),
-      ("testHttpHeaderReader", testHttpHeaderReader),
       ("testHttpServer", testHttpServer),
       ("testHttpServerBind", testHttpServerBind),
       ("testChunkedTransfer", testChunkedTransfer),
       ("testKeepConnect", testKeepConnect),
     ]
+
+    let xmlSamplePacket = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+      "<CATALOG>" +
+      "  <CD>" +
+      "    <TITLE>Empire Burlesque</TITLE>" +
+      "    <ARTIST>Bob Dylan</ARTIST>" +
+      "    <COUNTRY>USA</COUNTRY>" +
+      "    <COMPANY>Columbia</COMPANY>" +
+      "    <PRICE>10.90</PRICE>" +
+      "    <YEAR>1985</YEAR>" +
+      "  </CD>" +
+      "  <CD>" +
+      "    <TITLE>Hide your heart</TITLE>" +
+      "    <ARTIST>Bonnie Tyler</ARTIST>" +
+      "    <COUNTRY>UK</COUNTRY>" +
+      "    <COMPANY>CBS Records</COMPANY>" +
+      "    <PRICE>9.90</PRICE>" +
+      "    <YEAR>1988</YEAR>" +
+      "  </CD>" +
+      "  <CD>" +
+      "    <TITLE>Greatest Hits</TITLE>" +
+      "    <ARTIST>Dolly Parton</ARTIST>" +
+      "    <COUNTRY>USA</COUNTRY>" +
+      "    <COMPANY>RCA</COMPANY>" +
+      "    <PRICE>9.90</PRICE>" +
+      "    <YEAR>1982</YEAR>" +
+      "  </CD>" +
+      "  <CD>" +
+      "    <TITLE>Still got the blues</TITLE>" +
+      "    <ARTIST>Gary Moore</ARTIST>" +
+      "    <COUNTRY>UK</COUNTRY>" +
+      "    <COMPANY>Virgin records</COMPANY>" +
+      "    <PRICE>10.20</PRICE>" +
+      "    <YEAR>1990</YEAR>" +
+      "  </CD>" +
+      "  <CD>" +
+      "    <TITLE>Eros</TITLE>" +
+      "    <ARTIST>Eros Ramazzotti</ARTIST>" +
+      "    <COUNTRY>EU</COUNTRY>" +
+      "    <COMPANY>BMG</COMPANY>" +
+      "    <PRICE>9.90</PRICE>" +
+      "    <YEAR>1997</YEAR>" +
+      "  </CD>" +
+      "  <CD>" +
+      "    <TITLE>One night only</TITLE>" +
+      "    <ARTIST>Bee Gees</ARTIST>" +
+      "    <COUNTRY>UK</COUNTRY>" +
+      "    <COMPANY>Polydor</COMPANY>" +
+      "    <PRICE>10.90</PRICE>" +
+      "    <YEAR>1998</YEAR>" +
+      "  </CD>" +
+      "  <CD>" +
+      "    <TITLE>Sylvias Mother</TITLE>" +
+      "    <ARTIST>Dr.Hook</ARTIST>" +
+      "    <COUNTRY>UK</COUNTRY>" +
+      "    <COMPANY>CBS</COMPANY>" +
+      "    <PRICE>8.10</PRICE>" +
+      "    <YEAR>1973</YEAR>" +
+      "  </CD>" +
+      "  <CD>" +
+      "    <TITLE>Maggie May</TITLE>" +
+      "    <ARTIST>Rod Stewart</ARTIST>" +
+      "    <COUNTRY>UK</COUNTRY>" +
+      "    <COMPANY>Pickwick</COMPANY>" +
+      "    <PRICE>8.50</PRICE>" +
+      "    <YEAR>1990</YEAR>" +
+      "  </CD>" +
+      "  <CD>" +
+      "    <TITLE>Romanza</TITLE>" +
+      "    <ARTIST>Andrea Bocelli</ARTIST>" +
+      "    <COUNTRY>EU</COUNTRY>" +
+      "    <COMPANY>Polydor</COMPANY>" +
+      "    <PRICE>10.80</PRICE>" +
+      "    <YEAR>1996</YEAR>" +
+      "  </CD>" +
+      "  <CD>" +
+      "    <TITLE>When a man loves a woman</TITLE>" +
+      "    <ARTIST>Percy Sledge</ARTIST>" +
+      "    <COUNTRY>USA</COUNTRY>" +
+      "    <COMPANY>Atlantic</COMPANY>" +
+      "    <PRICE>8.70</PRICE>" +
+      "    <YEAR>1987</YEAR>" +
+      "  </CD>" +
+      "  <CD>" +
+      "    <TITLE>Black angel</TITLE>" +
+      "    <ARTIST>Savage Rose</ARTIST>" +
+      "    <COUNTRY>EU</COUNTRY>" +
+      "    <COMPANY>Mega</COMPANY>" +
+      "    <PRICE>10.90</PRICE>" +
+      "    <YEAR>1995</YEAR>" +
+      "  </CD>" +
+      "  <CD>" +
+      "    <TITLE>1999 Grammy Nominees</TITLE>" +
+      "    <ARTIST>Many</ARTIST>" +
+      "    <COUNTRY>USA</COUNTRY>" +
+      "    <COMPANY>Grammy</COMPANY>" +
+      "    <PRICE>10.20</PRICE>" +
+      "    <YEAR>1999</YEAR>" +
+      "  </CD>" +
+      "  <CD>" +
+      "    <TITLE>For the good times</TITLE>" +
+      "    <ARTIST>Kenny Rogers</ARTIST>" +
+      "    <COUNTRY>UK</COUNTRY>" +
+      "    <COMPANY>Mucik Master</COMPANY>" +
+      "    <PRICE>8.70</PRICE>" +
+      "    <YEAR>1995</YEAR>" +
+      "  </CD>" +
+      "  <CD>" +
+      "    <TITLE>Big Willie style</TITLE>" +
+      "    <ARTIST>Will Smith</ARTIST>" +
+      "    <COUNTRY>USA</COUNTRY>" +
+      "    <COMPANY>Columbia</COMPANY>" +
+      "    <PRICE>9.90</PRICE>" +
+      "    <YEAR>1997</YEAR>" +
+      "  </CD>" +
+      "  <CD>" +
+      "    <TITLE>Tupelo Honey</TITLE>" +
+      "    <ARTIST>Van Morrison</ARTIST>" +
+      "    <COUNTRY>UK</COUNTRY>" +
+      "    <COMPANY>Polydor</COMPANY>" +
+      "    <PRICE>8.20</PRICE>" +
+      "    <YEAR>1971</YEAR>" +
+      "  </CD>" +
+      "  <CD>" +
+      "    <TITLE>Soulsville</TITLE>" +
+      "    <ARTIST>Jorn Hoel</ARTIST>" +
+      "    <COUNTRY>Norway</COUNTRY>" +
+      "    <COMPANY>WEA</COMPANY>" +
+      "    <PRICE>7.90</PRICE>" +
+      "    <YEAR>1996</YEAR>" +
+      "  </CD>" +
+      "  <CD>" +
+      "    <TITLE>The very best of</TITLE>" +
+      "    <ARTIST>Cat Stevens</ARTIST>" +
+      "    <COUNTRY>UK</COUNTRY>" +
+      "    <COMPANY>Island</COMPANY>" +
+      "    <PRICE>8.90</PRICE>" +
+      "    <YEAR>1990</YEAR>" +
+      "  </CD>" +
+      "  <CD>" +
+      "    <TITLE>Stop</TITLE>" +
+      "    <ARTIST>Sam Brown</ARTIST>" +
+      "    <COUNTRY>UK</COUNTRY>" +
+      "    <COMPANY>A and M</COMPANY>" +
+      "    <PRICE>8.90</PRICE>" +
+      "    <YEAR>1988</YEAR>" +
+      "  </CD>" +
+      "  <CD>" +
+      "    <TITLE>Bridge of Spies</TITLE>" +
+      "    <ARTIST>T'Pau</ARTIST>" +
+      "    <COUNTRY>UK</COUNTRY>" +
+      "    <COMPANY>Siren</COMPANY>" +
+      "    <PRICE>7.90</PRICE>" +
+      "    <YEAR>1987</YEAR>" +
+      "  </CD>" +
+      "  <CD>" +
+      "    <TITLE>Private Dancer</TITLE>" +
+      "    <ARTIST>Tina Turner</ARTIST>" +
+      "    <COUNTRY>UK</COUNTRY>" +
+      "    <COMPANY>Capitol</COMPANY>" +
+      "    <PRICE>8.90</PRICE>" +
+      "    <YEAR>1983</YEAR>" +
+      "  </CD>" +
+      "  <CD>" +
+      "    <TITLE>Midt om natten</TITLE>" +
+      "    <ARTIST>Kim Larsen</ARTIST>" +
+      "    <COUNTRY>EU</COUNTRY>" +
+      "    <COMPANY>Medley</COMPANY>" +
+      "    <PRICE>7.80</PRICE>" +
+      "    <YEAR>1983</YEAR>" +
+      "  </CD>" +
+      "  <CD>" +
+      "    <TITLE>Pavarotti Gala Concert</TITLE>" +
+      "    <ARTIST>Luciano Pavarotti</ARTIST>" +
+      "    <COUNTRY>UK</COUNTRY>" +
+      "    <COMPANY>DECCA</COMPANY>" +
+      "    <PRICE>9.90</PRICE>" +
+      "    <YEAR>1991</YEAR>" +
+      "  </CD>" +
+      "  <CD>" +
+      "    <TITLE>The dock of the bay</TITLE>" +
+      "    <ARTIST>Otis Redding</ARTIST>" +
+      "    <COUNTRY>USA</COUNTRY>" +
+      "    <COMPANY>Stax Records</COMPANY>" +
+      "    <PRICE>7.90</PRICE>" +
+      "    <YEAR>1968</YEAR>" +
+      "  </CD>" +
+      "  <CD>" +
+      "    <TITLE>Picture book</TITLE>" +
+      "    <ARTIST>Simply Red</ARTIST>" +
+      "    <COUNTRY>EU</COUNTRY>" +
+      "    <COMPANY>Elektra</COMPANY>" +
+      "    <PRICE>7.20</PRICE>" +
+      "    <YEAR>1985</YEAR>" +
+      "  </CD>" +
+      "  <CD>" +
+      "    <TITLE>Red</TITLE>" +
+      "    <ARTIST>The Communards</ARTIST>" +
+      "    <COUNTRY>UK</COUNTRY>" +
+      "    <COMPANY>London</COMPANY>" +
+      "    <PRICE>7.80</PRICE>" +
+      "    <YEAR>1987</YEAR>" +
+      "  </CD>" +
+      "  <CD>" +
+      "    <TITLE>Unchain my heart</TITLE>" +
+      "    <ARTIST>Joe Cocker</ARTIST>" +
+      "    <COUNTRY>USA</COUNTRY>" +
+      "    <COMPANY>EMI</COMPANY>" +
+      "    <PRICE>8.20</PRICE>" +
+      "    <YEAR>1987</YEAR>" +
+      "  </CD>" +
+      "</CATALOG>"
 }

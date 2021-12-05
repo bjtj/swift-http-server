@@ -23,8 +23,13 @@ final class ReadTests: XCTestCase {
                 guard let data = data else {
                     return
                 }
-                let header = HttpHeader.read(text: String(data: data, encoding: .utf8)!)
-                XCTAssertEqual(headerString, header.description)
+                do {
+                    let header = try HttpHeader.read(text: String(data: data, encoding: .utf8)!)
+                    XCTAssertEqual(headerString, header.description)
+                } catch {
+                    XCTFail("error - \(error)")
+                }
+                
                 break
             case .readBody:
                 break
@@ -57,8 +62,12 @@ final class ReadTests: XCTestCase {
                 guard let data = data else {
                     return
                 }
-                let header = HttpHeader.read(text: String(data: data, encoding: .utf8)!)
-                XCTAssertEqual(headerString, header.description)
+                do {
+                    let header = try HttpHeader.read(text: String(data: data, encoding: .utf8)!)
+                                    XCTAssertEqual(headerString, header.description)
+                } catch {
+                    XCTFail("error - \(error)")
+                }
                 break
             case .readBody:
                 break

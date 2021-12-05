@@ -64,15 +64,12 @@ public class HttpHeader {
         }
     }
 
-    public var transferEncoding: HttpTransferEncoding? {
+    public var transferEncoding: TransferEncoding? {
         get {
             guard let encoding = self["Transfer-Encoding"] else {
                 return nil
             }
-            if encoding.caseInsensitiveCompare("chunked") == .orderedSame {
-                return .chunked
-            }
-            return nil
+            return TransferEncoding(rawValue: encoding)
         }
         set (value) {
             guard let encoding = value else {
@@ -125,7 +122,7 @@ public class HttpHeader {
         return "\(firstLine.description)\r\n\(fieldsString)\r\n"
     }
 
-    public static func read(text: String) -> HttpHeader {
+    public static func read(text: String) throws -> HttpHeader {
         let header = HttpHeader()
         let lines = text.components(separatedBy: "\r\n")
         var first = true
@@ -134,10 +131,13 @@ public class HttpHeader {
                 break
             }
             if first {
-                header.firstLine = FirstLine.read(text: line)
+                header.firstLine = try FirstLine.read(text: line)
                 first = false
             } else {
                 let tokens = line.split(separator: ":", maxSplits: 1)
+                guard tokens.count > 0 else {
+                    continue
+                }
                 header[tokens[0].trimmingCharacters(in: .whitespaces)] =
                   (tokens.count == 1 ? "" : "\(tokens[1])").trimmingCharacters(in: .whitespaces)
             }

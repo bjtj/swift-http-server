@@ -1,68 +1,116 @@
-import Foundation
+//
+// ChunkedTransfer.swift
+// 
 
-public enum ChunkedTransferFormatError : Error {
-    case insufficientChunkSize
-    case insufficientChunkData
-}
+import Foundation
+import Socket
+
 
 /**
  ChunkedTransfer
  */
-public class ChunkedTransfer {
+public class ChunkedTransfer: Transfer {
 
-    var inputStream: InputStream
+    let remoteSocket: Socket
+    var startWithData: Data?
+    var readBuffer: Data = Data()
+    let separator: Data
 
-    public init(inputStream: InputStream, bufferSize: Int = 1024) {
-        self.inputStream = inputStream
+    /**
+     status
+     */
+    public var status: TransferStatus = .idle
+
+    /**
+     remaining buffer
+     */
+    public var remainingData: Data? {
+        return readBuffer
     }
 
-    func readChunkSize() throws -> Int {
-        let bufferSize = 1
-        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
-        var data = Data()
-        while inputStream.hasBytesAvailable {
-            let readSize = inputStream.read(buffer, maxLength: bufferSize)
-            guard readSize > 0 else {
-                continue
-            }
-            data.append(buffer, count: bufferSize)
-            if let range = data.range(of: "\r\n".data(using: .utf8)!) {
-                return Int(String(data: data.subdata(in: 0..<range.lowerBound), encoding: .utf8)!)!
-            }
+    init?(remoteSocket: Socket, startWithData: Data? = nil) throws {
+        self.remoteSocket = remoteSocket
+        self.startWithData = startWithData
+
+        guard let data = "\r\n".data(using: .utf8) else {
+            throw HttpServerError.custom(string: "?? \"\\r\\n\".data(using: .utf8) failed")
         }
-        throw ChunkedTransferFormatError.insufficientChunkSize
-    }
+        separator = data
 
-    func readChunkData(chunkSize: Int) throws -> Data {
-        let bufferSize = 1024
-        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
-        var data = Data()
-        while inputStream.hasBytesAvailable {
-            let count = chunkSize - data.count
-            let readSize = inputStream.read(buffer, maxLength: count)
-            guard readSize > 0 else {
-                continue
-            }
-            data.append(buffer, count: count)
-            if data.count == chunkSize {
-                return data
-            }
+        if let startWithData = startWithData {
+            readBuffer.append(startWithData)
         }
-        throw ChunkedTransferFormatError.insufficientChunkData
+
+        status = .process
     }
 
-    public func read(_ buffer: UnsafeMutablePointer<UInt8>, maxLength: Int) -> Int {
-        do {
-            let size = try readChunkSize()
-            let data = try readChunkData(chunkSize: size)
-            data.copyBytes(to: buffer, count: data.count)
+    public func read() throws -> Data? {
+        let size = try readSize()
+
+        // if size == 0 {
+        //     status = .completed
+        //     return nil
+        // }
+
+        return try readContent(size: size)
+    }
+
+    func readSize() throws -> Int {
+        repeat {
+            guard let range = readBuffer.range(of: separator) else {
+
+                var buffer = Data()
+                let bytesRead = try remoteSocket.read(into: &buffer)
+
+                guard buffer.count == bytesRead else {
+                    throw HttpServerError.custom(
+                      string: "insufficient read bytes \(bytesRead) / count: \(buffer.count)")
+                }
+
+                readBuffer.append(buffer)
+                buffer.count = 0
+                
+                continue
+            }            
+            let sizeData = readBuffer.subdata(in: 0..<range.lowerBound)
+            guard let sizeString = String(data: sizeData, encoding: .utf8) else {
+                throw HttpServerError.custom(string: "cannot convert data to string")
+            }            
+            readBuffer.removeSubrange(0..<range.upperBound)
+            guard let size = Int(sizeString, radix: 16) else {
+                throw HttpServerError.custom(string: "failed convert to number `\(sizeString)`")
+            }
             return size
-        } catch {
-            return 0
-        }
+        } while true
     }
 
-    public var hasBytesAvailable: Bool {
-        return inputStream.hasBytesAvailable == false
+    func readContent(size: Int) throws -> Data? {
+        guard size >= 0 else {
+            throw HttpServerError.custom(string: "invalid content size `\(size)`")
+        }
+        repeat {
+            guard readBuffer.count >= size + separator.count else {
+
+                var buffer = Data()
+                let bytesRead = try remoteSocket.read(into: &buffer)
+
+                guard buffer.count == bytesRead else {
+                    throw HttpServerError.custom(
+                      string: "insufficient read bytes \(bytesRead) / count: \(buffer.count)")
+                }
+
+                readBuffer.append(buffer)
+                buffer.count = 0
+                
+                continue
+            }
+            guard readBuffer[(readBuffer.endIndex - separator.count)..<readBuffer.count] == separator else {
+                throw HttpServerError.custom(string: "insufficient chunked content format -- must ends with \(separator)")
+            }
+            let data = size == 0 ? nil : readBuffer.subdata(in: 0..<size)
+            readBuffer.removeSubrange(0..<size+2)
+            return data
+        } while true
     }
+
 }

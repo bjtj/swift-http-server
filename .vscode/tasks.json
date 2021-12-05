@@ -1,10 +1,10 @@
 {
-    "version": "0.2.0",
+    "version": "2.0.0",
     "tasks": [
         {
             "label": "swift-build",
             "type": "shell",
-            "command": "swift build"
+            "command": "swift build --build-tests"
         }
     ]
 }
