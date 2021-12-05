@@ -217,6 +217,8 @@ final class swift_http_serverTests: XCTestCase {
                     }
                     print("Http Server is bound to '\(address.description)'")
 
+                    let enabledTestChunked = false
+
                     self.calledMap["notfound"] = 0
                     self.calledMap["get"] = 0
                     self.calledMap["error"] = 0
@@ -225,7 +227,9 @@ final class swift_http_serverTests: XCTestCase {
                     self.calledMap["post3"] = 0
                     self.calledMap["post4"] = 0
                     self.calledMap["post5"] = 0
-                    self.calledMap["chunked"] = 0
+                    if enabledTestChunked {
+                        self.calledMap["chunked"] = 0
+                    }
 
                     print("self.calledMap.count --- \(self.calledMap.count)")
 
@@ -300,23 +304,27 @@ final class swift_http_serverTests: XCTestCase {
 
                     // -*- chunked -*-
 
-                    self.helperChunked(url: URL(string: "http://localhost:\(address.port)/chunked")!,
-                                       dataArray: ["hello1".data(using: .utf8)!,
-                                                   "hello12".data(using: .utf8)!,
-                                                   "hello123".data(using: .utf8)!,
-                                                   "hello1234".data(using: .utf8)!,
-                                                   "hello12345".data(using: .utf8)!,
-                                                   "hello123456".data(using: .utf8)!,
-                                                   "hello1234567".data(using: .utf8)!,
-                                                   "hello12345678".data(using: .utf8)!,
-                                                   "hello123456789".data(using: .utf8)!,
-                                                   "hello1234567890".data(using: .utf8)!,
-                                                   "hello12345678901".data(using: .utf8)!,
-                                                   "hello123456789012".data(using: .utf8)!,
-                                                   "hello1234567890123".data(using: .utf8)!,
-                                                   "hello12345678901234".data(using: .utf8)!,
-                                                   "hello123456789012345".data(using: .utf8)!,],
-                                       name: "chunked")
+                    if enabledTestChunked {
+                        self.helperChunked(url: URL(string: "http://localhost:\(address.port)/chunked")!,
+                                           dataArray: ["hello1".data(using: .utf8)!,
+                                                       "hello12".data(using: .utf8)!,
+                                                       "hello123".data(using: .utf8)!,
+                                                       "hello1234".data(using: .utf8)!,
+                                                       "hello12345".data(using: .utf8)!,
+                                                       "hello123456".data(using: .utf8)!,
+                                                       "hello1234567".data(using: .utf8)!,
+                                                       "hello12345678".data(using: .utf8)!,
+                                                       "hello123456789".data(using: .utf8)!,
+                                                       "hello1234567890".data(using: .utf8)!,
+                                                       "hello12345678901".data(using: .utf8)!,
+                                                       "hello123456789012".data(using: .utf8)!,
+                                                       "hello1234567890123".data(using: .utf8)!,
+                                                       "hello12345678901234".data(using: .utf8)!,
+                                                       "hello123456789012345".data(using: .utf8)!,],
+                                           name: "chunked")
+                    }
+
+                    
                 }
             } catch let error {
                 XCTFail("error occured - \(error)")
@@ -501,7 +509,7 @@ final class swift_http_serverTests: XCTestCase {
                 data.copyBytes(to: buffer, count: count)
                 idx += 1
 
-                usleep(500 * 1000)
+                // usleep(500 * 1000)
                 
                 return count
             }
@@ -519,6 +527,7 @@ final class swift_http_serverTests: XCTestCase {
         req.httpBodyStream = MyInputStream(dataArray: dataArray)
         req.addValue(name, forHTTPHeaderField: "x-name")
         req.addValue("close", forHTTPHeaderField: "Connection")
+        req.addValue("chunked", forHTTPHeaderField: "Transfer-Encoding")
         // req.addValue(contentType, forHTTPHeaderField: "Content-Type")
         let task = session.dataTask(with: req) {
             (data, response, error) in
@@ -536,6 +545,7 @@ final class swift_http_serverTests: XCTestCase {
             }
 
             XCTAssertEqual(len, body.count)
+            print(body)
 
             swift_http_serverTests.lockQueue.sync {
                 [self] in 

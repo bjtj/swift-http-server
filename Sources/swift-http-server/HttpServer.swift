@@ -263,7 +263,7 @@ public class HttpServer {
 
     func getTransfer(remoteSocket: Socket, request: HttpRequest, startWithData: Data?) throws -> Transfer? {
         switch request.header.transferEncoding {
-        case .chunked:
+        case let val where val == .chunked:
             return try ChunkedTransfer(remoteSocket: remoteSocket, startWithData: startWithData)            
         default:
             // TODO: tolerable content length is ok?
