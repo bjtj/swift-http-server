@@ -188,6 +188,7 @@ public class HttpServer {
         var remainingData: Data? = nil
         repeat {
             (needKeepDoing, remainingData) = readSend(remoteSocket: remoteSocket, startWithData: remainingData)
+            usleep(10 * 1000)
         } while needKeepDoing
     }
 
