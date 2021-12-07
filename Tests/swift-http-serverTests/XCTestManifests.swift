@@ -5,7 +5,6 @@ public func allTests() -> [XCTestCaseEntry] {
     return [
       testCase(URLParsePathTests.allTests),
       testCase(HttpHeaderTests.allTests),
-      testCase(ReadTests.allTests),
       testCase(RouterTests.allTests),
       testCase(swift_http_serverTests.allTests),
     ]
