@@ -1,14 +1,25 @@
-
+//
+// HttpHeader.swift
+// 
 
 /**
  Http Header
  */
 public class HttpHeader {
 
+    /**
+     HTTP Protocol Version
+     */
     public var specVersion: HttpSpecVersion?
+    /**
+     First line
+     */
     public var firstLine = FirstLine()
     var fields: [KeyValuePair] = []
 
+    /**
+     Check header fields contains the key (ignore case)
+     */
     public func contains(key: String?) -> Bool {
         for field in fields {
             if field.key?.caseInsensitiveCompare(key!) == .orderedSame {
@@ -18,6 +29,9 @@ public class HttpHeader {
         return false
     }
 
+    /**
+     Get `Content-Length` field value
+     */
     public var contentLength: Int? {
         get {
             guard let length = self["Content-Length"] else {
@@ -30,6 +44,9 @@ public class HttpHeader {
         }
     }
 
+    /**
+     Get `Content-Type` field value
+     */
     public var contentType: String? {
         get {
             guard let type = self["Content-Type"] else {
@@ -42,6 +59,9 @@ public class HttpHeader {
         }
     }
 
+    /**
+     Get `Connection` field value
+     */
     public var connectionType: HttpConnectionType? {
         get {
             guard let connection = self["Connection"] else {
@@ -64,6 +84,9 @@ public class HttpHeader {
         }
     }
 
+    /**
+     Get `Transfer-Encoding` field value
+     */
     public var transferEncoding: TransferEncoding? {
         get {
             guard let encoding = self["Transfer-Encoding"] else {
@@ -80,6 +103,9 @@ public class HttpHeader {
         }
     }
 
+    /**
+     Get `Expect` field value
+     */
     public var expect: String? {
         get {
             return self["Expect"]
@@ -89,6 +115,9 @@ public class HttpHeader {
         }
     }
 
+    /**
+     Check if `Expect` is 100-*
+     */
     public var isExpect100: Bool {
         guard let expect = self["Expect"] else {
             return false
@@ -96,6 +125,9 @@ public class HttpHeader {
         return expect.hasPrefix("100-")
     }
 
+    /**
+     Get header field subscript way (ignore case)
+     */
     public subscript (key: String) -> String? {
         get {
             for field in fields {
@@ -115,6 +147,9 @@ public class HttpHeader {
         }
     }
 
+    /**
+     To Header String
+     */
     public var description: String {
         let fieldsString = fields.map {
             "\($0.key ?? ""): \($0.value ?? "")\r\n"
@@ -122,6 +157,9 @@ public class HttpHeader {
         return "\(firstLine.description)\r\n\(fieldsString)\r\n"
     }
 
+    /**
+     Read Http Header from string
+     */
     public static func read(text: String) throws -> HttpHeader {
         let header = HttpHeader()
         let lines = text.components(separatedBy: "\r\n")

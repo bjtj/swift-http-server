@@ -1,3 +1,7 @@
+//
+// URLPathParser.swift
+// 
+
 import Foundation
 
 
@@ -11,13 +15,31 @@ class URLPathParser {
     }
 
     let string: String
+    /**
+     Path (e.g. `http://example.com/path/to/;param1=foo;param2=bar` -> `/path/to/`)
+     */
     public var path: String
+    
+    /**
+     Path parameter (e.g. `http://example.com/path/to/;param1=foo;param2=bar` -> `param1=foo;param2=bar`)
+     */
     public var pathParameterString: String?
+    
+    /**
+     Query parameter (e.g. `http://example.com/path/to/?param1=foo&param2=bar` -> `param1=foo&param2=bar`)
+     */
     public var queryString: String?
+    
+    /**
+     Fragment (e.g. `http://example.com/path/to/#top` -> `top`)
+     */
     public var fragmentString: String?
     var _pathParameters = KeyValuesDict()
     var _queryParameters = KeyValuesDict()
 
+    /**
+     Get/Set fragment
+     */
     public var fragment: String? {
         get {
             return fragmentString
@@ -90,18 +112,30 @@ class URLPathParser {
         return "#\(string)"
     }
 
+    /**
+     All count of query parameters
+     */
     public var countAllQueryParameters: Int {
         return _queryParameters.countAll
     }
 
+    /**
+     All count of path parameters
+     */
     public var countAllPathParameters: Int {
         return _pathParameters.countAll
     }
 
+    /**
+     To string
+     */
     public var description: String {
         return "\(path)\(describePathParameter)\(describeQuery)\(describeFragment)"
     }
 
+    /**
+     Keys of query paramters or path parameters
+     */
     public func keys(of type: ParameterType) -> [String] {
         switch type {
         case .queryParameter:
@@ -111,6 +145,9 @@ class URLPathParser {
         }
     }
 
+    /**
+     Parameter of query paramters or path parameters (default: queery paramter)
+     */
     public func parameter(_ key: String, of type: ParameterType = .queryParameter) -> String? {
         switch type {
         case .queryParameter:
@@ -120,6 +157,9 @@ class URLPathParser {
         }
     }
 
+    /**
+     Parameters of query paramters or path parameters (default: queery paramter)
+     */
     public func parameters(_ key: String, of type: ParameterType = .queryParameter) -> [String]? {
         switch type {
         case .queryParameter:
@@ -129,6 +169,9 @@ class URLPathParser {
         }
     }
 
+    /**
+     Set parameter of query paramters or path parameters (default: queery paramter)
+     */
     public func setParameter(_ key: String, _ value: String, of type: ParameterType = .queryParameter) {
         switch type {
         case .queryParameter:
@@ -138,6 +181,9 @@ class URLPathParser {
         }
     }
 
+    /**
+     Set parameters of query paramters or path parameters (default: queery paramter)
+     */
     public func setParameters(_ key: String, _ values: [String], of type: ParameterType = .queryParameter) {
         switch type {
         case .queryParameter:
@@ -147,6 +193,9 @@ class URLPathParser {
         }
     }
 
+    /**
+     Append parameter of query paramters or path parameters (default: queery paramter)
+     */
     public func appendParameter(_ key: String, value: String, of type: ParameterType = .queryParameter) {
         switch type {
         case .queryParameter:
@@ -156,6 +205,9 @@ class URLPathParser {
         }
     }
 
+    /**
+     Append parameters of query paramters or path parameters (default: queery paramter)
+     */
     public func appendParameters(_ key: String, values: [String], of type: ParameterType = .queryParameter) {
         switch type {
         case .queryParameter:
@@ -165,6 +217,9 @@ class URLPathParser {
         }
     }
 
+    /**
+     Remote parameter of query paramters or path parameters (default: queery paramter)
+     */
     public func removeParameter(_ key: String, of type: ParameterType = .queryParameter) {
         switch type {
         case .queryParameter:
@@ -174,6 +229,9 @@ class URLPathParser {
         }
     }
 
+    /**
+     Remove parameter at index of query paramters or path parameters (default: queery paramter)
+     */
     public func removeParameter(_ key: String, at: Int, of type: ParameterType = .queryParameter) {
         switch type {
         case .queryParameter:

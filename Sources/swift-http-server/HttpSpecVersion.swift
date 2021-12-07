@@ -1,3 +1,7 @@
+//
+// HttpSpecVersion.swift
+// 
+
 import Foundation
 
 /**

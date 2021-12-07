@@ -1,3 +1,6 @@
+//
+// HttpTransferEncoding.swift
+//
 
 /**
  HttpTransferEncoding

@@ -11,30 +11,43 @@ import Socket
  */
 public class HttpServer {
 
+    /**
+     Server Status
+     */
     public enum Status {
         case idle
         case started
         case stopped
     }
 
+    /**
+     Http Server Status Monitoring Handler Type
+     */
     public typealias monitorHandlerType = ((String?, HttpServer.Status, Error?) -> Void)
 
     var status: Status = .idle
 
     var monitorName: String?
     var finishing = false
-    var _running = false
+
+    /**
+     Is Running?
+     */
     public var running: Bool {
         get {
             return _running
         }
     }
+    var _running = false
     var listenSocket: Socket?
     var hostname: String?
     var port: Int
     var backlog: Int
     var reusePort: Bool
     var connectedSockets = [Int32: Socket]()
+    /**
+     Connected Socket Count
+     */
     public var connectedSocketCount: Int {
         get {
             return connectedSockets.count
@@ -83,7 +96,7 @@ public class HttpServer {
     }
 
     /**
-     Get Listening Port
+     Get Actual Listening Port
      */
     public var listeningPort: Int32? {
         return listenSocket?.listeningPort
@@ -101,7 +114,7 @@ public class HttpServer {
     }
 
     /**
-     set monitor
+     Set Monitoring Handler
      */
     public func monitor(monitorName: String?, monitorHandler: monitorHandlerType?) -> Void {
         self.monitorName = monitorName
@@ -109,7 +122,7 @@ public class HttpServer {
     }
 
     /**
-     run
+     Run Http Server
      */
     public func run(readyHandler: ((HttpServer, Error?) -> Void)? = nil) throws {
 
@@ -383,6 +396,9 @@ public class HttpServer {
         return (a, b)
     }
 
+    /**
+     Finish Http Server
+     */
     public func finish() {
         finishing = true
         for socket in connectedSockets.values {

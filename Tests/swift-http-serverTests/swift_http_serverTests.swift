@@ -12,16 +12,6 @@ final class swift_http_serverTests: XCTestCase {
     var calledMap = [String:Int]()
     static let lockQueue = DispatchQueue(label: "swift_http_serverTests")
     static let closeConnection = false
-    
-    /**
-     example
-     */
-    func testExample() {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct
-        // results.
-        XCTAssertEqual(swift_http_server().text, "Hello, World!")
-    }
 
     // TEST -- http server bind test
     func testHttpServerBind() -> Void {
@@ -575,7 +565,6 @@ final class swift_http_serverTests: XCTestCase {
     }
 
     static var allTests = [
-      ("testExample", testExample),
       ("testHttpServer", testHttpServer),
       ("testHttpServerBind", testHttpServerBind),
       ("testChunkedTransfer", testChunkedTransfer),

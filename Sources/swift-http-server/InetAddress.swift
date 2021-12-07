@@ -1,3 +1,7 @@
+//
+// InetAddress.swift
+// 
+
 import Foundation
 
 /**
@@ -21,10 +25,24 @@ public enum InetVersion {
  */
 public class InetAddress {
 
+    /**
+     Inet version
+     */
     public var version: InetVersion
+
+    /**
+     Hostname
+     */
     public var hostname: String
+
+    /**
+     Port number
+     */
     public var port: Int32
 
+    /**
+     To String
+     */
     public var description: String {
         return "(\(version))\(hostname) \(port)"
     }

@@ -5,6 +5,10 @@ import Foundation
  */
 public class Network {
 
+    /**
+     Get representable inet address (avoid both ipv4 and ipv5 localhost)
+     - Parameter targetVersion target inet version (default: .ipv4)
+     */
     public static func getInetAddress(targetVersion: InetVersion = .ipv4) -> InetAddress? {
         let addrs = getInetAddresses()
         for addr in addrs {
@@ -21,6 +25,9 @@ public class Network {
         return nil
     }
 
+    /**
+     Get Inet Address List
+     */
     public static func getInetAddresses() -> [InetAddress] {
 
         var result = [InetAddress]()

@@ -17,12 +17,12 @@ public class ChunkedTransfer: Transfer {
     let separator: Data
 
     /**
-     status
+     Status
      */
     public var status: TransferStatus = .idle
 
     /**
-     remaining buffer
+     Remaining Buffer
      */
     public var remainingData: Data? {
         return readBuffer
@@ -44,13 +44,11 @@ public class ChunkedTransfer: Transfer {
         status = .process
     }
 
+    /**
+     Process Read
+     */
     public func read() throws -> Data? {
         let size = try readSize()
-
-        // if size == 0 {
-        //     status = .completed
-        //     return nil
-        // }
 
         return try readContent(size: size)
     }

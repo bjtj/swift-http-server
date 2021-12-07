@@ -1,3 +1,7 @@
+//
+// HttpResponse.swift
+// 
+
 import Foundation
 
 
@@ -5,9 +9,17 @@ import Foundation
  HttpResponse
  */
 public class HttpResponse {
-    
+
+    /**
+     Http Header
+     */
     public var header = HttpHeader()
-    public var _data: Data?
+    
+    var _data: Data?
+    /**
+     Content Data and set content length with data size
+     TODO: support other transfer types
+     */
     public var data: Data? {
         get {
             return _data
@@ -22,6 +34,9 @@ public class HttpResponse {
         }
     }
 
+    /**
+     Get/Set code part of firstline
+     */
     public var code: Int {
         get {
             return Int(header.firstLine.second)!
@@ -31,6 +46,9 @@ public class HttpResponse {
         }
     }
 
+    /**
+     Get/Set reason part of firstline
+     */
     public var reason: String? {
         get {
             return header.firstLine.third
@@ -40,6 +58,9 @@ public class HttpResponse {
         }
     }
 
+    /**
+     Get/Set content type of http header
+     */
     public var contentType: String? {
         get {
             return header.contentType
@@ -49,10 +70,12 @@ public class HttpResponse {
         }
     }
 
-    var _status: HttpStatusCode?
-     public var status: HttpStatusCode? {
-         get {
-             return _status
+    /**
+     Get/Set Http Status (code & reason)
+     */
+    public var status: HttpStatusCode? {
+        get {
+            return _status
         }
 
         set(value) {
@@ -67,6 +90,7 @@ public class HttpResponse {
             reason = statusCode.rawValue.reason
         }
     }
+    var _status: HttpStatusCode?
 
     public init(specVersion: HttpSpecVersion = .http1_1, statusCode: HttpStatusCode) {
         header.specVersion = specVersion
@@ -74,10 +98,14 @@ public class HttpResponse {
         status = statusCode
     }
 
+    /**
+     Set Status (code & reason)
+     @deprecated use `status` computed variable
+     */
     @available(*, deprecated, renamed: "status")
     public func setStatus(code: Int, reason: String? = nil) {
         status = .custom(code, reason ?? "Unknown")
     }
 
-   
+    
 }

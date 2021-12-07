@@ -1,3 +1,7 @@
+//
+// HttpServerRouter.swift
+// 
+
 import Foundation
 
 
@@ -75,7 +79,9 @@ public class HttpServerRouter {
     }
 
     /**
-     register router
+     Register route
+     - Parameter pattern exact matching pattern or ** wildcard pattern
+     - Parameter handler handler for http request
      */
     public func register(pattern: String, handler: HttpRequestHandler?) throws {
 
@@ -101,7 +107,7 @@ public class HttpServerRouter {
     }
 
     /**
-     unregister router
+     Unregister route
      */
     public func unregister(pattern: String) {
         for (i, matcher) in table.enumerated() {
@@ -113,7 +119,7 @@ public class HttpServerRouter {
     }
 
     /**
-     dispatch router
+     Dispatch handler with path
      */
     public func dispatch(path: String) -> HttpRequestHandler? {
         return table.first(where: { $0.match(path: path) })?.handler

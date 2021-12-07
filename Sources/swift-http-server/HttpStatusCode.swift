@@ -1,3 +1,7 @@
+// 
+// HttpStatusCode.swift
+// 
+
 import Foundation
 
 
@@ -7,47 +11,47 @@ import Foundation
 public enum HttpStatusCode {
 
     case custom(Int, String)
-    case `continue`
-    case switchingProtocols
-    case ok
-    case created
-    case accepted
-    case nonAuthoritativeInformation 
-    case noContent
-    case resetContent
-    case partialContent
-    case multipleChoices
-    case movedPermanently
-    case found
-    case seeOther
-    case notModified
-    case useProxy
-    case unused
-    case temporaryRedirect
-    case badRequest
-    case unauthorized
-    case paymentRequired
-    case forbidden
-    case notFound
-    case methodNotAllowed
-    case notAcceptable
-    case proxyAuthenticationRequired
-    case requestTimeout
-    case conflict
-    case gone
-    case lengthRequired
-    case preconditionFailed
-    case requestEntityTooLarge
-    case requestURITooLong 
-    case unsupportedMediaType
-    case requestedRangeNotSatisfiable
-    case expectationFailed
-    case internalServerError
-    case notImplemented
-    case badGateway
-    case serviceUnavailable
-    case gatewayTimeout
-    case httpVersionNotSupported
+    case `continue`                  // 100 Continue
+    case switchingProtocols          // 101 Switching Protocols
+    case ok                          // 200 OK
+    case created                     // 201 Created
+    case accepted                    // 202 Accepted
+    case nonAuthoritativeInformation // 203 Non-Authoritative Information
+    case noContent                   // 204 No Content
+    case resetContent                // 205 Reset Content
+    case partialContent              // 206 Partial Content
+    case multipleChoices             // 300 Multiple Choices
+    case movedPermanently            // 301 Moved Permanently
+    case found                       // 302 Found
+    case seeOther                    // 303 See Other
+    case notModified                 // 304 Not Modified
+    case useProxy                    // 305 Use Proxy
+    case unused                      // 306 (Unused)
+    case temporaryRedirect           // 307 Temporary Redirect
+    case badRequest                  // 400 Bad Request
+    case unauthorized                // 401 Unauthorized
+    case paymentRequired             // 402 Payment Required
+    case forbidden                   // 403 Forbidden
+    case notFound                    // 404 Not Found
+    case methodNotAllowed            // 405 Method Not Allowed
+    case notAcceptable               // 406 Not Acceptable
+    case proxyAuthenticationRequired // 407 Proxy Authentication Required
+    case requestTimeout              // 408 Request Timeout
+    case conflict                    // 409 Conflict
+    case gone                        // 410 Gone
+    case lengthRequired              // 411 Length Required
+    case preconditionFailed          // 412 Precondition Failed
+    case requestEntityTooLarge       // 413 Request Entity Too Large
+    case requestURITooLong           // 414 Request-URI Too Long
+    case unsupportedMediaType        // 415 Unsupported Media Type
+    case requestedRangeNotSatisfiable // 416 Requested Range Not Satisfiable
+    case expectationFailed            // 417 Expectation Failed
+    case internalServerError          // 500 Internal Server Error
+    case notImplemented               // 501 Not Implemented
+    case badGateway                   // 502 Bad Gateway
+    case serviceUnavailable           // 503 Service Unavailable
+    case gatewayTimeout               // 504 Gateway Timeout
+    case httpVersionNotSupported // 505 HTTP Version Not Supported
     
 
     struct Code : Equatable {

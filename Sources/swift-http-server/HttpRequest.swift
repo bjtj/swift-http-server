@@ -1,3 +1,7 @@
+//
+// HttpRequest.swift
+// 
+
 import Socket
 import Foundation
 
