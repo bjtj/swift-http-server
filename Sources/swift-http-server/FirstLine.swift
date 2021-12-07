@@ -1,30 +1,48 @@
+//
+// FirstLine.swift
+// 
 
 /**
- FirstLine
+ HttpHeader FirstLine
  */
 public class FirstLine {
 
     private var parts = ["", "", ""]
 
+    /**
+     First Part
+     */
     public var first: String {
         get {return parts[0]}
         set(value) { parts[0] = value }
     }
 
+    /**
+     Second Part
+     */
     public var second: String {
         get {return parts[1]}
         set(value) { parts[1] = value }
     }
 
+    /**
+     Third Part
+     */
     public var third: String {
         get {return parts[2]}
         set(value) { parts[2] = value }
     }
 
+    /**
+     To String
+     */
     public var description: String {
         return parts.joined(separator: " ")
     }
 
+    /**
+     Read from string
+     */
     public static func read(text: String) throws -> FirstLine {
         let firstLine = FirstLine()
         let tokens = text.split(separator: " ", maxSplits: 2)

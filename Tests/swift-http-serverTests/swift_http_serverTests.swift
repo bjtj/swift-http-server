@@ -574,45 +574,11 @@ final class swift_http_serverTests: XCTestCase {
         XCTAssertNil(try transfer.readContent(size: 0))
     }
 
-    func testKeepConnect() throws {
-
-        let header = HttpHeader()
-
-        header.firstLine = try FirstLine.read(text: "HTTP/1.0 200 OK")
-
-        XCTAssertEqual(header.connectionType, nil)
-        XCTAssertEqual(false, requiredKeepConnect(specVersion: header.firstLine.first, header: header))
-
-        header["Connection"] = "close"
-        XCTAssertEqual(header.connectionType, .close)
-        XCTAssertEqual(false, requiredKeepConnect(specVersion: header.firstLine.first, header: header))
-
-        header["Connection"] = "keep-alive"
-        XCTAssertEqual(header.connectionType, .keep_alive)
-        XCTAssertEqual(true, requiredKeepConnect(specVersion: header.firstLine.first, header: header))
-
-        header.firstLine = try FirstLine.read(text: "HTTP/1.1 200 OK")
-        header["Connection"] = nil
-        XCTAssertEqual(true, requiredKeepConnect(specVersion: header.firstLine.first, header: header))
-
-        header["Connection"] = "close"
-        XCTAssertEqual(header.connectionType, .close)
-        XCTAssertEqual(false, requiredKeepConnect(specVersion: header.firstLine.first, header: header))
-
-        header["Connection"] = "keep-alive"
-        XCTAssertEqual(header.connectionType, .keep_alive)
-        XCTAssertEqual(true, requiredKeepConnect(specVersion: header.firstLine.first, header: header))
-        
-        // Connection: keep-alive
-        // Connection: close
-    }
-
     static var allTests = [
       ("testExample", testExample),
       ("testHttpServer", testHttpServer),
       ("testHttpServerBind", testHttpServerBind),
       ("testChunkedTransfer", testChunkedTransfer),
-      ("testKeepConnect", testKeepConnect),
     ]
 
     let xmlSamplePacket = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
