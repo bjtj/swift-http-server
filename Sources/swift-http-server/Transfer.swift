@@ -4,6 +4,9 @@
 
 import Foundation
 
+/**
+ Transfer Status
+ */
 public enum TransferStatus {
     case idle, process, completed
 }
