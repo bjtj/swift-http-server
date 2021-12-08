@@ -80,8 +80,8 @@ public class HttpServerRouter {
 
     /**
      Register route
-     - Parameters pattern: exact matching pattern or ** wildcard pattern
-     - Parameters handler: handler for http request
+     - Parameter pattern: exact matching pattern or ** wildcard pattern
+     - Parameter handler: handler for http request
      */
     public func register(pattern: String, handler: HttpRequestHandler?) throws {
 
