@@ -7,7 +7,7 @@ public class Network {
 
     /**
      Get representable inet address (avoid both ipv4 and ipv5 localhost)
-     - Parameters targetVersion target inet version (default: .ipv4)
+     - Parameters targetVersion: target inet version (default: .ipv4)
      */
     public static func getInetAddress(targetVersion: InetVersion = .ipv4) -> InetAddress? {
         let addrs = getInetAddresses()
