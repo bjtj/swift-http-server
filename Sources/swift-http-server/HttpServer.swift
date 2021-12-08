@@ -12,6 +12,11 @@ import Socket
 public class HttpServer {
 
     /**
+     Connection Filter
+     */
+    public typealias connectionFilter = ((Socket) -> Bool)
+
+    /**
      Server Status
      */
     public enum Status {
@@ -45,6 +50,8 @@ public class HttpServer {
     var backlog: Int
     var reusePort: Bool
     var connectedSockets = [Int32: Socket]()
+    public var connectionFilter: connectionFilter?
+    
     /**
      Connected Socket Count
      */
@@ -178,8 +185,15 @@ public class HttpServer {
         listenSocket.close()
     }
 
+    // onConnect
     func onConnect(remoteSocket: Socket) {
-
+        if let filter = self.connectionFilter {
+            guard filter(remoteSocket) else {
+                // socket filtered
+                return
+            }
+        }
+        
         lockQueue.sync { [self, remoteSocket] in
             self.connectedSockets[remoteSocket.socketfd] = remoteSocket
         }

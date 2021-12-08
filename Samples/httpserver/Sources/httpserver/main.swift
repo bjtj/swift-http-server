@@ -34,6 +34,20 @@ func main() throws {
         print(" [\(name ?? "nil")] HTTP SERVER Status changed to '\(status)'")
     }
 
+    server.connectionFilter = {
+        (socket) in
+        guard let signature = socket.signature else {
+            print("NO SIGNATURE!")
+            return false
+        }
+        guard let hostname = signature.hostname else {
+            print("NO HOSTNAME")
+            return false
+        }
+        print("[CONNECTED] remote socket -- '\(hostname):\(signature.port)'")
+        return true
+    }
+
     class GetHandler: HttpRequestHandler {
         
         var dumpBody: Bool = true
@@ -46,7 +60,7 @@ func main() throws {
             // response.setStatus(code: 200, reason: "GOOD") <-- deprecated but works for now
             response.status = .custom(200, "GOOD")
             response.contentType = "text/plain"
-            response.data = "Hello".data(using: .utf8)
+            response.data = "Hello\n".data(using: .utf8)
         }
     }
 

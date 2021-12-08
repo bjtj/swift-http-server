@@ -112,6 +112,22 @@ final class swift_http_serverTests: XCTestCase {
             (name, status, error) in
             print(" ------------- [\(name ?? "nil")] HTTP SERVER Status changed to '\(status)'")
         }
+        server.connectionFilter = {
+            (socket) in
+
+            guard let signature = socket.signature else {
+                XCTFail("wierd socket! not signature")
+                return false
+            }
+
+            guard let hostname = signature.hostname else {
+                XCTFail("wierd socket! no hostname")
+                return false
+            }
+            
+            print("connectionFilter(\(hostname):\(signature.port))")
+            return true
+        }
 
         // `Get` handler
         class GetHandler: HttpRequestHandler {
