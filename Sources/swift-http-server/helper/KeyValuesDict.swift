@@ -61,7 +61,7 @@ class KeyValuesDict {
     }
 
     func joined(elementsSeparator: String, separator: String) -> String {
-        keyValuesArray.map {
+        return keyValuesArray.map {
             $0.joined(elementsSeparator: elementsSeparator, separator: separator)
         }.joined(separator: elementsSeparator)
     }

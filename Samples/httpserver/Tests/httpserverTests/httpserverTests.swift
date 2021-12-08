@@ -13,7 +13,7 @@ final class httpserverTests: XCTestCase {
         }
 
         // Mac Catalyst won't have `Process`, but it is supported for executables.
-        #if !targetEnvironment(macCatalyst)
+        #if !targetEnvironment(macCatalyst) && swift(>=5.0)
 
         let fooBinary = productsDirectory.appendingPathComponent("httpserver")
 
