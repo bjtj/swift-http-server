@@ -63,7 +63,7 @@ class GetHandler: HttpRequestHandler {
     }
     
     func onBodyCompleted(body: Data?, request: HttpRequest, response: HttpResponse) throws {
-        response.code = 200
+        response.status = .ok
         response.data = "Hello".data(using: .utf8)
     }
 }
