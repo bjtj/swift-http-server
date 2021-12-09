@@ -40,7 +40,7 @@ Add it to dependency (package.swift)
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/bjtj/swift-http-server.git", from: "0.1.13"),
+    .package(url: "https://github.com/bjtj/swift-http-server.git", from: "0.1.20"),
   ],
 ```
 
@@ -56,8 +56,10 @@ import SwiftHttpServer
 let server = HttpServer(port: 0)
 
 class GetHandler: HttpRequestHandler {
+
+    var dumpBody: Bool = true
+
     func onHeaderCompleted(header: HttpHeader, request: HttpRequest,  response: HttpResponse) throws {
-        
     }
     
     func onBodyCompleted(body: Data?, request: HttpRequest, response: HttpResponse) throws {
