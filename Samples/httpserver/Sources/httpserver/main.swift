@@ -29,6 +29,8 @@ func main() throws {
     
     let server = HttpServer(hostname: bindHostname, port: bindPort)
 
+    // server.features.supportKeepConnect = true
+
     server.monitor(monitorName: "sample-http-server") {
         (name, status, error) in
         print(" [\(name ?? "nil")] HTTP SERVER Status changed to '\(status)'")

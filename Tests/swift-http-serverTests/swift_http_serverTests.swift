@@ -12,6 +12,7 @@ final class swift_http_serverTests: XCTestCase {
     var calledMap = [String:Int]()
     static let lockQueue = DispatchQueue(label: "swift_http_serverTests")
     static let closeConnection = false
+    static let enabledTestChunked = false
 
     // TEST -- http server bind test
     func testHttpServerBind() -> Void {
@@ -125,7 +126,7 @@ final class swift_http_serverTests: XCTestCase {
                 return false
             }
             
-            print("connectionFilter(\(hostname):\(signature.port))")
+            print("connected -- (\(hostname):\(signature.port))")
             return true
         }
 
@@ -223,8 +224,6 @@ final class swift_http_serverTests: XCTestCase {
                     }
                     print("Http Server is bound to '\(address.description)'")
 
-                    let enabledTestChunked = false
-
                     self.calledMap["notfound"] = 0
                     self.calledMap["get"] = 0
                     self.calledMap["error"] = 0
@@ -233,7 +232,7 @@ final class swift_http_serverTests: XCTestCase {
                     self.calledMap["post3"] = 0
                     self.calledMap["post4"] = 0
                     self.calledMap["post5"] = 0
-                    if enabledTestChunked {
+                    if swift_http_serverTests.enabledTestChunked {
                         self.calledMap["chunked"] = 0
                     }
 
@@ -310,7 +309,7 @@ final class swift_http_serverTests: XCTestCase {
 
                     // -*- chunked -*-
 
-                    if enabledTestChunked {
+                    if swift_http_serverTests.enabledTestChunked {
                         self.helperChunked(url: URL(string: "http://localhost:\(address.port)/chunked")!,
                                            dataArray: ["hello1".data(using: .utf8)!,
                                                        "hello12".data(using: .utf8)!,

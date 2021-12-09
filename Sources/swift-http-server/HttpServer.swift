@@ -12,6 +12,19 @@ import Socket
 public class HttpServer {
 
     /**
+     Http Server Features
+     */
+    public struct Features {
+        public var supportKeepConnect = false
+    }
+
+    /**
+     features
+     */
+    public var features: Features
+
+
+    /**
      Connection Filter
      */
     public typealias connectionFilter = ((Socket) -> Bool)
@@ -70,6 +83,7 @@ public class HttpServer {
         self.port = port
         self.backlog = backlog
         self.reusePort = reusePort
+        features = Features()
     }
 
     /**
@@ -215,7 +229,9 @@ public class HttpServer {
         var remainingData: Data? = nil
         repeat {
             (needKeepDoing, remainingData) = readSend(remoteSocket: remoteSocket, startWithData: remainingData)
-            usleep(10 * 1000)
+            guard features.supportKeepConnect else {
+                return
+            }
         } while needKeepDoing
     }
 
