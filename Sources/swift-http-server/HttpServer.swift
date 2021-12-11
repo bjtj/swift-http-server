@@ -245,7 +245,7 @@ public class HttpServer {
 
             // Get Request Handler
             guard let handler = router.dispatch(path: request.path) else {
-                try sendResponse(socket: remoteSocket, response: errorResponse(statusCode: .notFound))
+                try sendResponse(socket: remoteSocket, response: errorResponse(status: .notFound))
                 return (false, nil)
             }
 
@@ -253,7 +253,7 @@ public class HttpServer {
                 request.body = Data()
             }
             
-            let response = HttpResponse(statusCode: .notFound)
+            let response = HttpResponse(status: .notFound)
             
             do {
                 // Handle Header Completed
@@ -261,7 +261,7 @@ public class HttpServer {
 
                 // Get Transfer Handler
                 guard let transfer = try getTransfer(remoteSocket: remoteSocket, request: request, startWithData: remainingDataFromHeaderRead) else {
-                    try sendResponse(socket: remoteSocket, response: errorResponse(statusCode: .badRequest, customBody: "Invalid Transfer Encoding \(request.header["Transfer-Encoding"] ?? "nil")"))
+                    try sendResponse(socket: remoteSocket, response: errorResponse(status: .badRequest, customBody: "Invalid Transfer Encoding \(request.header["Transfer-Encoding"] ?? "nil")"))
                     return (false, nil)
                 }
 
@@ -284,11 +284,19 @@ public class HttpServer {
                 // Check Continuous Handling
                 let remainingDataFromBodyRead = transfer.remainingData
                 return (checkKeepAlive(request: request, response: response), remainingDataFromBodyRead)
-                
+
+            } catch HttpServerError.httpResponse(let status, let fields, let data) {
+                try sendResponse(socket: remoteSocket,
+                                 response: makeResponse(status: status, fields: fields, data: data))
+                return (false, nil)
+            } catch let status as HttpStatusCode {
+                try sendResponse(socket: remoteSocket,
+                                 response: makeResponse(status: status))
+                return (false, nil)
             } catch {
                 // Operation Failed
                 guard error is Socket.Error else {
-                    try sendResponse(socket: remoteSocket, response: errorResponse(statusCode: .internalServerError, customBody: "Operation Failed with:\n\(error)"))
+                    try sendResponse(socket: remoteSocket, response: errorResponse(status: .internalServerError, customBody: "Operation Failed with:\n\(error)"))
                     return (false, nil)
                 }
                 throw error
@@ -303,6 +311,17 @@ public class HttpServer {
             }
             return (false, nil)
         }
+    }
+
+    func makeResponse(status: HttpStatusCode, fields _fields: [String:String]? = nil, data: Data? = nil) -> HttpResponse {
+        let response = HttpResponse(status: status)
+        if let fields = _fields {
+            for (k, v) in fields {
+                response[k] = v
+            }
+        }
+        response.data = data
+        return response
     }
 
     func getTransfer(remoteSocket: Socket, request: HttpRequest, startWithData: Data?) throws -> Transfer? {
@@ -353,13 +372,13 @@ public class HttpServer {
         }
     }
 
-    func errorResponse(statusCode: HttpStatusCode, customBody: String? = nil, contentType: String = "text/plain") -> HttpResponse {
-        let response = HttpResponse(statusCode: statusCode)
+    func errorResponse(status: HttpStatusCode, customBody: String? = nil, contentType: String = "text/plain") -> HttpResponse {
+        let response = HttpResponse(status: status)
         response.header.contentType = contentType
         if let body = customBody {
             response.data = body.data(using: .utf8)
         } else {
-            response.data = "Error: \(statusCode.description)".data(using: .utf8)
+            response.data = "Error: \(status.description)".data(using: .utf8)
         }
         return response
     }

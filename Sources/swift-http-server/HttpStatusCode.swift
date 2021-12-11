@@ -8,7 +8,7 @@ import Foundation
 /**
  Http Status Code
  */
-public enum HttpStatusCode {
+public enum HttpStatusCode: Error {
 
     case custom(Int, String)
     case `continue`                  // 100 Continue

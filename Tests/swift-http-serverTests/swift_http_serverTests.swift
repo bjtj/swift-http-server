@@ -113,11 +113,12 @@ final class swift_http_serverTests: XCTestCase {
             (name, status, error) in
             print(" ------------- [\(name ?? "nil")] HTTP SERVER Status changed to '\(status)'")
         }
+        var connectedCount = 0
         server.connectionFilter = {
             (socket) in
 
             guard let signature = socket.signature else {
-                XCTFail("wierd socket! not signature")
+                XCTFail("wierd socket! no signature")
                 return false
             }
 
@@ -125,7 +126,8 @@ final class swift_http_serverTests: XCTestCase {
                 XCTFail("wierd socket! no hostname")
                 return false
             }
-            
+
+            connectedCount += 1
             print("connected -- (\(hostname):\(signature.port))")
             return true
         }
@@ -135,10 +137,8 @@ final class swift_http_serverTests: XCTestCase {
             var dumpBody: Bool = true
 
             func onHeaderCompleted(header: HttpHeader, request: HttpRequest,  response: HttpResponse) throws {
-                
             }
             func onBodyCompleted(body: Data?, request: HttpRequest, response: HttpResponse) throws {
-                // response.setStatus(code: 200, reason: "GOOD") <-- deprecated but works for now
                 response.status = .custom(200, "GOOD")
                 response.contentType = "text/plain"
                 response.data = "Hello".data(using: .utf8)
@@ -151,7 +151,6 @@ final class swift_http_serverTests: XCTestCase {
             var dumpBody: Bool = true
             
             func onHeaderCompleted(header: HttpHeader, request: HttpRequest, response: HttpResponse) throws {
-                
             }
             func onBodyCompleted(body: Data?, request: HttpRequest, response: HttpResponse) throws {
                 response.status = .ok
@@ -168,7 +167,20 @@ final class swift_http_serverTests: XCTestCase {
             func onHeaderCompleted(header: HttpHeader, request: HttpRequest, response: HttpResponse) throws {
             }
             func onBodyCompleted(body: Data?, request: HttpRequest, response: HttpResponse) throws {
-                throw HttpServerError.custom(string: "!!!!!!!!!!!!!!!!!ERROR!!!!!!!!!!!!!!!!!!!")
+
+                let type = request.parameter("type")
+
+                switch type {
+                case "ok":
+                    throw HttpStatusCode.ok
+                case "echo":
+                    let data = request.parameter("data")
+                    throw HttpServerError.httpResponse(status: .ok, fields: nil, data: data?.data(using: .utf8))
+                default:
+                    break
+                }
+                
+                throw HttpServerError.custom(string: "ERROR ERROR ERROR ERROR")
             }
         }
 
@@ -224,39 +236,68 @@ final class swift_http_serverTests: XCTestCase {
                     }
                     print("Http Server is bound to '\(address.description)'")
 
-                    self.calledMap["notfound"] = 0
-                    self.calledMap["get"] = 0
-                    self.calledMap["error"] = 0
-                    self.calledMap["post1"] = 0
-                    self.calledMap["post2"] = 0
-                    self.calledMap["post3"] = 0
-                    self.calledMap["post4"] = 0
-                    self.calledMap["post5"] = 0
-                    if swift_http_serverTests.enabledTestChunked {
-                        self.calledMap["chunked"] = 0
-                    }
-
-                    print("self.calledMap.count --- \(self.calledMap.count)")
-
                     // -*- not found -*-
-
                     self.helperNotFound(url: URL(string: "http://localhost:\(address.port)/notfound")!,
                                         name: "notfound")
 
-                    // -*- get -*-
+                    // -*- get error ok -*-
+                    self.helperGet(url: URL(string: "http://localhost:\(address.port)/error?type=ok")!,
+                                   name: "error-ok") {
+                        (data, response, error) in
+                        guard let urlresponse = response as? HTTPURLResponse else {
+                            XCTFail("response as? HTTPURLResponse")
+                            return
+                        }
+                        XCTAssertEqual(urlresponse.statusCode, 200)
+                    }
 
+                    // -*- get error echo -*-
+                    self.helperGet(url: URL(string: "http://localhost:\(address.port)/error?type=echo&data=hello")!,
+                                   name: "error-echo") {
+                        (_data, response, error) in
+                        guard let urlresponse = response as? HTTPURLResponse else {
+                            XCTFail("response as? HTTPURLResponse")
+                            return
+                        }
+                        XCTAssertEqual(urlresponse.statusCode, 200)
+
+                        guard let data = _data else {
+                            XCTFail("no data")
+                            return
+                        }
+                        
+                        XCTAssertEqual("hello", String(data: data, encoding: .utf8))
+                    }
+
+                    // -*- get error -*-
                     self.helperGet(url: URL(string: "http://localhost:\(address.port)/error")!,
-                                   containsBody: "!!!!!!!!!!!!!!!!!ERROR!!!!!!!!!!!!!!!!!!!",
-                                   name: "error")
+                                   name: "error") {
+                        (_data, response, error) in
+                        guard let urlresponse = response as? HTTPURLResponse else {
+                            XCTFail("response as? HTTPURLResponse")
+                            return
+                        }
+                        XCTAssertEqual(urlresponse.statusCode, 500)
 
-                    // -*- get -*-
+                        guard let data = _data else {
+                            XCTFail("no data")
+                            return
+                        }
 
+                        guard let string = String(data: data, encoding: .utf8) else {
+                            XCTFail("data -> string failed")
+                            return
+                        }
+                        
+                        XCTAssertTrue(string.contains("ERROR ERROR ERROR ERROR"))
+                    }
+
+                    // -*- get error -*-
                     self.helperGet(url: URL(string: "http://localhost:\(address.port)")!,
                                    expectedBody: "Hello",
                                    name: "get")
 
                     // -*- post -*-
-
                     self.helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
                                     contentType: "text/plain",
                                     body: "HiHo".data(using: .utf8)!,
@@ -264,7 +305,6 @@ final class swift_http_serverTests: XCTestCase {
                                     name: "post1")
 
                     // -*- post long -*-
-
                     let longPacket = self.xmlSamplePacket
 
                     XCTAssertTrue(longPacket.count > 4096)
@@ -276,7 +316,6 @@ final class swift_http_serverTests: XCTestCase {
                                     name: "post2")
 
                     // -*- post very long -*-
-                    
                     let veryLongPacket = self.utilMultiplyString(string: longPacket, count: 11)
 
                     self.helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
@@ -286,7 +325,6 @@ final class swift_http_serverTests: XCTestCase {
                                     name: "post3")
 
                     // -*- post very very long -*-
-                    
                     let veryveryLongPacket = self.utilMultiplyString(string: veryLongPacket, count: 8)
 
                     self.helperPost(url: URL(string: "http://localhost:\(address.port)/post")!,
@@ -296,7 +334,6 @@ final class swift_http_serverTests: XCTestCase {
                                     name: "post4")
 
                     // -*- post very very very long -*-
-                    
                     let veryveryveryLongPacket = self.utilMultiplyString(string: veryveryLongPacket, count: 101)
 
                     XCTAssertEqual(veryveryveryLongPacket.count, 41373640)
@@ -308,7 +345,6 @@ final class swift_http_serverTests: XCTestCase {
                                     name: "post5")
 
                     // -*- chunked -*-
-
                     if swift_http_serverTests.enabledTestChunked {
                         self.helperChunked(url: URL(string: "http://localhost:\(address.port)/chunked")!,
                                            dataArray: ["hello1".data(using: .utf8)!,
@@ -345,6 +381,8 @@ final class swift_http_serverTests: XCTestCase {
         XCTAssertFalse(server.running)
         XCTAssertEqual(server.connectedSocketCount, 0)
 
+        XCTAssertEqual(connectedCount, calledMap.count)
+
         for (k, v) in calledMap {
             print("\(k) called? \(v > 0) (\(v))")
             XCTAssertTrue(v > 0)
@@ -360,8 +398,17 @@ final class swift_http_serverTests: XCTestCase {
         return ret
     }
 
+    func countup(_ name: String) {
+        swift_http_serverTests.lockQueue.sync {
+            calledMap[name] = calledMap[name]! + 1
+        }
+    }
+
     // HELPER -- NOT FOUND
     func helperNotFound(url: URL, name: String) {
+
+        calledMap[name] = 0
+        
         var req = URLRequest(url: url)
         req.addValue(name, forHTTPHeaderField: "x-name")
         req.addValue("close", forHTTPHeaderField: "Connection")
@@ -380,16 +427,35 @@ final class swift_http_serverTests: XCTestCase {
 
             XCTAssertEqual(urlresponse.statusCode, 404)
 
-            swift_http_serverTests.lockQueue.sync {
-                [self] in
-                self.calledMap[name] = self.calledMap[name]! + 1
-            }
+            self.countup(name)
+        }
+        task.resume()
+    }
+
+    // HELPER -- GET
+    func helperGet(url: URL, name: String, handler: ((Data?, URLResponse?, Error?) throws -> Void)?) {
+
+        calledMap[name] = 0
+        
+        var req = URLRequest(url: url)
+        req.addValue(name, forHTTPHeaderField: "x-name")
+        req.addValue("close", forHTTPHeaderField: "Connection")
+        let session = URLSession(configuration: URLSessionConfiguration.default)
+        let task = session.dataTask(with: req) {
+            (data, response, error) in
+
+            try? handler?(data, response, error)
+
+            self.countup(name)
         }
         task.resume()
     }
 
     // HELPER -- GET
     func helperGet(url: URL, expectedBody: String, name: String) {
+
+        calledMap[name] = 0
+        
         var req = URLRequest(url: url)
         req.addValue(name, forHTTPHeaderField: "x-name")
         req.addValue("close", forHTTPHeaderField: "Connection")
@@ -410,16 +476,17 @@ final class swift_http_serverTests: XCTestCase {
             }
             XCTAssertEqual(expectedBody, body)
 
-            swift_http_serverTests.lockQueue.sync {
-                [self] in
-                self.calledMap[name] = self.calledMap[name]! + 1
-            }
+            self.countup(name)
         }
         task.resume()
     }
 
     // HELPER -- GET
     func helperGet(url: URL, containsBody: String, name: String) {
+
+        calledMap[name] = 0
+
+        
         var req = URLRequest(url: url)
         req.addValue(name, forHTTPHeaderField: "x-name")
         req.addValue("close", forHTTPHeaderField: "Connection")
@@ -440,16 +507,16 @@ final class swift_http_serverTests: XCTestCase {
             }
             XCTAssertTrue(body.contains(containsBody))
 
-            swift_http_serverTests.lockQueue.sync {
-                [self] in
-                self.calledMap[name] = self.calledMap[name]! + 1
-            }
+            self.countup(name)
         }
         task.resume()
     }
 
     // HELPER -- POST
     func helperPost(url: URL, contentType: String, body: Data, expectedBody: String, name: String) {
+
+        calledMap[name] = 0
+        
         let session = URLSession(configuration: URLSessionConfiguration.default)
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
@@ -477,10 +544,7 @@ final class swift_http_serverTests: XCTestCase {
             }
             XCTAssertEqual(expectedBody, body)
 
-            swift_http_serverTests.lockQueue.sync {
-                [self] in 
-                self.calledMap[name] = self.calledMap[name]! + 1
-            }
+            self.countup(name)
         }
         task.resume()
     }
@@ -488,6 +552,9 @@ final class swift_http_serverTests: XCTestCase {
 
     // HELPER -- CHUNKED TRANSFER
     func helperChunked(url: URL, dataArray: [Data], name: String) {
+
+        calledMap[name] = 0
+        
         // TODO:
 
         // https://developer.apple.com/documentation/foundation/inputstream
@@ -552,10 +619,7 @@ final class swift_http_serverTests: XCTestCase {
             XCTAssertEqual(len, body.count)
             print(body)
 
-            swift_http_serverTests.lockQueue.sync {
-                [self] in 
-                self.calledMap[name] = self.calledMap[name]! + 1
-            }
+            self.countup(name)
         }
         task.resume()
     }

@@ -92,10 +92,10 @@ public class HttpResponse {
     }
     var _status: HttpStatusCode?
 
-    public init(specVersion: HttpSpecVersion = .http1_1, statusCode: HttpStatusCode) {
+    public init(specVersion: HttpSpecVersion = .http1_1, status: HttpStatusCode) {
         header.specVersion = specVersion
         header.firstLine.first = specVersion.rawValue
-        status = statusCode
+        self.status = status
     }
 
     /**
@@ -107,5 +107,15 @@ public class HttpResponse {
         status = .custom(code, reason ?? "Unknown")
     }
 
-    
+    /**
+     subscribe - HttpHeader delegate
+     */
+    public subscript (key: String) -> String? {
+        get {
+            return header[key]
+        }
+        set (value) {
+            header[key] = value
+        }
+    }
 }
