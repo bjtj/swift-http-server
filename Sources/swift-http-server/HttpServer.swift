@@ -154,8 +154,7 @@ public class HttpServer {
         finishing = false
         _running = true
         status = .started
-        monitorHandler?(monitorName, status, nil)
-
+        
         defer {
             listenSocket = nil
             _running = false
@@ -165,6 +164,7 @@ public class HttpServer {
         
         listenSocket = try Socket.create(family: .inet, type: .stream, proto: .tcp)
         try prepare()
+        monitorHandler?(monitorName, status, nil)
         readyHandler?(self, nil)
         loop()
     }

@@ -14,6 +14,18 @@ final class swift_http_serverTests: XCTestCase {
     static let closeConnection = false
     static let enabledTestChunked = false
 
+    func serverMonitor(_ server: HttpServer) -> HttpServer.monitorHandlerType {
+        return {
+            (name, status, error) in
+            print(" ------------- [\(name ?? "nil")] HTTP SERVER Status changed to '\(status)'")
+            if status == .started {
+                XCTAssertNotNil(server.serverAddress)
+                print("Server Address: \(server.serverAddress?.description ?? "")")
+            }
+        }
+        
+    }
+
     // TEST -- http server bind test
     func testHttpServerBind() -> Void {
         
@@ -29,10 +41,7 @@ final class swift_http_serverTests: XCTestCase {
         do {
 
             let server = HttpServer(port: 0)
-            server.monitor(monitorName: "testHttpServerBind-1") {
-                (name, status, error) in
-                print(" ------------- [\(name ?? "nil")] HTTP SERVER Status changed to '\(status)'")
-            }
+            server.monitor(monitorName: "testHttpServerBind-1", monitorHandler: serverMonitor(server))
             DispatchQueue.global(qos: .default).async {
                 do {
                     try server.run()
@@ -41,8 +50,8 @@ final class swift_http_serverTests: XCTestCase {
                 }
             }
             sleep(1)
-            
-            print(server.serverAddress!.description)
+
+            print("server address: \(server.serverAddress?.description ?? "")")
             server.finish()
 
             sleep(1)
@@ -57,10 +66,7 @@ final class swift_http_serverTests: XCTestCase {
 
             let hostname = Network.getInetAddress()!.hostname
             let server = HttpServer(hostname: hostname, port: 0)
-            server.monitor(monitorName: "testHttpServerBind-2") {
-                (name, status, error) in
-                print(" ------------- [\(name ?? "nil")] HTTP SERVER Status changed to '\(status)'")
-            }
+            server.monitor(monitorName: "testHttpServerBind-2", monitorHandler: serverMonitor(server))
             DispatchQueue.global(qos: .default).async {
                 do {
                     try server.run()
@@ -109,10 +115,7 @@ final class swift_http_serverTests: XCTestCase {
     func testHttpServer() throws {
         
         let server = HttpServer(port: 0)
-        server.monitor(monitorName: "testHttpServer-1") {
-            (name, status, error) in
-            print(" ------------- [\(name ?? "nil")] HTTP SERVER Status changed to '\(status)'")
-        }
+        server.monitor(monitorName: "testHttpServer-1", monitorHandler: serverMonitor(server))
         var connectedCount = 0
         server.connectionFilter = {
             (socket) in
