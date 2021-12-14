@@ -50,17 +50,36 @@ class Matcher {
     // TODO: proper wildcard match
     func match(path: String) -> Bool {
         if let prefix = prefix, let suffix = suffix {
-            return path.hasPrefix(prefix) && path.hasSuffix(suffix)
+            return match(path, withPrefix: prefix, withSuffix: suffix)
         }
 
         if let prefix = prefix {
-            return path.hasPrefix(prefix)
+            return match(path, withPrefix: prefix)
         }
 
         if let suffix = suffix {
-            return path.hasSuffix(suffix)
+            return match(path, withSuffix: suffix)
         }
-        
+
+        return match(path, exactPattern: pattern)
+    }
+
+    func match(_ path: String, withPrefix prefix: String) -> Bool {
+        return path.hasPrefix(prefix)
+    }
+
+    func match(_ path: String, withSuffix suffix: String) -> Bool {
+        return path.hasSuffix(suffix)
+    }
+
+    func match(_ path: String, withPrefix prefix: String, withSuffix suffix: String) -> Bool {
+        guard path.count >= prefix.count + suffix.count else {
+            return false
+        }
+        return path.hasPrefix(prefix) && path.hasSuffix(suffix)
+    }
+
+    func match(_ path: String, exactPattern pattern: String) -> Bool {
         return pattern == path
     }
 }

@@ -77,7 +77,7 @@ final class RouterTests: XCTestCase {
             XCTAssertNotNil(router.dispatch(path: "/xyz/aaaaa/123"))
             XCTAssertNotNil(router.dispatch(path: "/xyz/ab/123"))
             XCTAssertNotNil(router.dispatch(path: "/xyz//123"))
-            XCTAssertNotNil(router.dispatch(path: "/xyz/123"))
+            XCTAssertNil(router.dispatch(path: "/xyz/123"))
             XCTAssertNil(router.dispatch(path: "/xyz"))
             XCTAssertNil(router.dispatch(path: "/123"))
             XCTAssertNil(router.dispatch(path: "/xyz/1234"))
